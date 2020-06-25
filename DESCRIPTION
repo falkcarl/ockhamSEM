@@ -1,0 +1,23 @@
+Package: ockhamSEM
+Type: Package
+Title: Tools for studying fit propensity in structural equation modeling.
+Version: 0.1.0
+Author: Carl F. Falk and Michael Muthukrishna. Need to credit code
+  from Harry Joe and possibly Kris Preacher.
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: This package provides an interface for studying the fit
+  propensity of single-group structural equation models with continuous items.
+  Underlying support is through the lavaan package, and a variety built-in
+  graphical and text summaries are provided.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    lavaan (>= 0.6-3),
+    ggplot2,
+    eulerr,
+    matrixcalc,
+    tidyr,
+    effsize,
+    parallel
+RoxygenNote: 7.1.0
