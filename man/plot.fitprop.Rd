@@ -7,7 +7,7 @@
 \method{plot}{fitprop}(
   x,
   ...,
-  type = "ecdf",
+  type = c("ecdf", "euler", "nVennR"),
   whichmod = NULL,
   whichfit = colnames(x$fit_list[[1]]),
   savePlot = FALSE,

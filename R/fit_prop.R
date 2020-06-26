@@ -2,7 +2,7 @@
 # output correlation matrix rr[][], density proportional to
 #   det(R)^{eta-1}
 #' @importFrom stats rbeta
-rcorcvine<-function(d,eta=1,nmat=1)
+rcorcvine<-function(d,eta=1)
 {
   d<-as.integer(d)
   if(d<=0 || !is.integer(d))
@@ -123,17 +123,7 @@ rcoronion.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
   return(r.mat)
 }
 
-#' @importFrom stats runif rnorm
-mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
-
-  eta_init<-eta
-  thin<-floor(eta/length(nmat))
-
-  r.mat<-matrix(NA,d*d,0)
-  #eta here is the number of iterations to go through before outputting the matrix (i.e., thinning)
-  o = d
-  r = matrix(0,o,o)
-
+mcmc.jump.defaults<-function(o){
   if (o==3) {
     jmpsize=.56
   } else if (o==4) {
@@ -159,6 +149,22 @@ mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
   } else if (o>=16) {
     jmpsize=.1
   }
+
+  return(jmpsize)
+}
+
+#' @importFrom stats runif rnorm
+mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
+
+  eta_init<-eta
+  thin<-floor(eta/length(nmat))
+
+  r.mat<-matrix(NA,d*d,0)
+  #eta here is the number of iterations to go through before outputting the matrix (i.e., thinning)
+  o = d
+  r = matrix(0,o,o)
+
+  jmpsize<-mcmc.jump.defaults(o)
 
   if(is.null(reject)){
     reject <- 0
@@ -264,31 +270,7 @@ fit_prop <- function(..., fit.measure=c("srmr"),
 
   #This bit is only for mcmc generation method
   o=d
-  if (o==3) {
-    jmpsize=.56
-  } else if (o==4) {
-    jmpsize=.48
-  } else if (o==5) {
-    jmpsize=.4
-  } else if (o==6) {
-    jmpsize=.34
-  } else if (o==7) {
-    jmpsize=.3
-  } else if (o==8) {
-    jmpsize=.26
-  } else if (o==9) {
-    jmpsize=.23
-  } else if (o==10) {
-    jmpsize=.21
-  } else if (o==11) {
-    jmpsize=.19
-  } else if (o==12 & o <15) {
-    jmpsize=.175
-  } else if (o==15) {
-    jmpsize=.12
-  } else if (o>=16) {
-    jmpsize=.1
-  }
+  jmpsize<-mcmc.jump.defaults(o)
 
   # check control
   if(is.null(control[["eta"]])){control[["eta"]]<-1}
@@ -501,6 +483,7 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
 #' @param mod.brewer.pal Optional character corresponding to the palette from RColorBrewer to use for the different models
 #' @export
 #' @importFrom ggplot2 ggplot aes stat_ecdf scale_color_brewer theme element_blank xlab ylab xlim ylim
+#' @importFrom graphics plot
 #' @importFrom stats na.omit
 #' @importFrom tidyr gather
 #' @importFrom eulerr euler
