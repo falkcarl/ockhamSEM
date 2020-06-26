@@ -352,7 +352,6 @@ fit_prop <- function(..., fit.measure=c("srmr"),
     nobs<-lavInspect(lavmodel,"nobs")
     my_fitted_model<-lavaan(model=ptab,
                             sample.cov=temp_matrix,
-                            #se="none",
                             sample.nobs= nobs,
                             slotOptions = opt)
                             #slotModel = lavmodel@Model)
@@ -368,7 +367,6 @@ fit_prop <- function(..., fit.measure=c("srmr"),
   for (lavmodel in models) {
     j = j + 1
     if(!is.null(cluster)){
-      #clusterEvalQ(cluster,require(lavaan))
       fit_tmp<-parLapply(cluster,1:nsim,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
     } else {
       fit_tmp<-lapply(1:nsim,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
@@ -437,27 +435,29 @@ genmat<-function(d,eta_val,onlypos,mat_func){
 
 #' @importFrom lavaan lavaan lavInspect fitMeasures
 fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
+
   temp_matrix <- matrix(out_mat[,indx],d,d)
   colnames(temp_matrix) <- rownames(temp_matrix) <- vnames
+
   # added from ShortForm Tabu code; nuke all starting values? Does this work? Not with older lavaan version
   lavmodel@ParTable$est<-NULL
   lavmodel@ParTable$start<-NULL
 
-  # replaced with update(); might be slower, but more stable? (doesn't work with older lavaan version)
+  # replaced with update()?; might be slower, but more stable? (doesn't work with older lavaan version)
   #res<-try({my_fitted_model<-update(lavmodel, sample.cov=temp_matrix)
+
   res<-try ({
     lavmodel@Options$se="none"
     lavmodel@Options$start="default"
     lavmodel@Options$do.fit=TRUE
-    #browser()
-  # lavmodel@Data
-  # lavmodel@SampleStats
+    #lavmodel@Data
+    #lavmodel@SampleStats
     #lavmodel@SampleStats@cov[[1]]<-temp_matrix
     #lavmodel@SampleStats@icov[[1]]<-solve(temp_matrix)
     #lavmodel@SampleStats@WLS.obs[[1]]<-lav_matrix_vech(temp_matrix)
 
     my_fitted_model<-lavaan(sample.cov=temp_matrix,
-                                    sample.nobs=lavInspect(lavmodel,"nobs"),
+                            sample.nobs=lavInspect(lavmodel,"nobs"),
                             #slotData = lavmodel@Data,
                             #slotSampleStats = lavmodel@SampleStats,
                             #slotModel = lavmodel@Model,
@@ -506,11 +506,11 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
 #' @importFrom eulerr euler
 #' @importFrom nVennR plotVenn
 #' @importFrom rlang .data
-plot.fitprop<-function(x,...,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_list[[1]]),savePlot=FALSE,
+plot.fitprop<-function(x,...,type=c("ecdf","euler","nVennR"),whichmod=NULL,whichfit=colnames(x$fit_list[[1]]),savePlot=FALSE,
                        xlim=c(0,1),samereps=TRUE,cutoff=rep(.1,length(whichfit)),lower.tail=rep(TRUE,length(whichfit)),
                        mod.lab=NULL,mod.brewer.pal="Set1"){
 
-  # TO DO: probably match.args for "type", some other input checking
+  type<-match.arg(type)
 
   data<-x$fit_list
   nmod<-length(data) # number of models
@@ -575,8 +575,9 @@ plot.fitprop<-function(x,...,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_l
       eulerfit<-euler(tmp)
       graph<-plot(eulerfit)
     } else if (type=="nVennR"){
-      #stop("Not yet functional")
-      #browser()
+
+      stop("nVennR is not yet functional")
+
       dat<-na.omit(dat)
       tmp<-list()
       indx<-1
