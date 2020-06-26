@@ -1,31 +1,3 @@
-#require(lavaan)
-#require(parallel)
-#require(ggplot2)
-#require(eulerr)
-#require(grid)
-#require(gridExtra)
-#require(matrixcalc)
-#require(tidyr)
-#require(effsize)
-
-#options(expressions=500000) #increase recursion limit
-
-
-#Helper functions----
-# qq plot against beta(alp,alp) distribution
-
-#' @importFrom stats qbeta
-#' @importFrom graphics plot title
-qqbeta=function(x,alp)
-{ xs=sort(x)
-  n=length(x)
-  pp=(1:n)/(n+1)
-  qq=qbeta(pp,alp,alp)
-  plot(qq,xs,ylab="corr",xlab="beta quantile")
-  title(paste("Beta quantile plot with a=b=",alp))
-  0
-}
-
 # input d>=2, eta>0 (eta=1 for uniform)
 # output correlation matrix rr[][], density proportional to
 #   det(R)^{eta-1}
@@ -359,8 +331,6 @@ fit_prop <- function(..., fit.measure=c("srmr"),
   print("Generate matrices")
   if(!is.null(cluster)){
     clusterSetRNGStream(cluster, control$seed)
-    #clusterEvalQ(cluster,require(ockhamSEM))
-    #clusterExport(cluster, list("rcoronion","rcorcvine"))
     nmat<-clusterSplit(cluster, 1:nsim)
     out_mat<-parLapply(cluster,nmat,mat_func,d=d,eta=eta_val,onlypos=onlypos)
   } else {
@@ -375,15 +345,14 @@ fit_prop <- function(..., fit.measure=c("srmr"),
   # If not, this code isn't necessary
   j<-1
   for (lavmodel in models) {
-    #browser()
     temp_matrix<-lavInspect(lavmodel,"sampstat")$cov
-    #parTable(lavmodel)
     ptab<-parTable(lavmodel)
     opt<-lavmodel@Options
+    opt$se<-"none"
     nobs<-lavInspect(lavmodel,"nobs")
     my_fitted_model<-lavaan(model=ptab,
                             sample.cov=temp_matrix,
-                            se="none",
+                            #se="none",
                             sample.nobs= nobs,
                             slotOptions = opt)
                             #slotModel = lavmodel@Model)
@@ -479,6 +448,8 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
   res<-try ({
     lavmodel@Options$se="none"
     lavmodel@Options$start="default"
+    lavmodel@Options$do.fit=TRUE
+    #browser()
   # lavmodel@Data
   # lavmodel@SampleStats
     #lavmodel@SampleStats@cov[[1]]<-temp_matrix
@@ -492,7 +463,7 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
                             #slotModel = lavmodel@Model,
                             slotOptions = lavmodel@Options,
                             slotParTable = lavmodel@ParTable,
-                            slotCache = lavmodel@Cache,do.fit=T)
+                            slotCache = lavmodel@Cache)
 
     if(my_fitted_model@optim$converged){
       #Store fit values
@@ -507,7 +478,6 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
     }
 
   }, silent=T)
-
 
   if(class(res)!="try-error"){
     return(fit_out)
