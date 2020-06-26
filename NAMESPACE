@@ -3,7 +3,7 @@
 S3method(plot,fitprop)
 S3method(print,fitprop)
 S3method(summary,fitprop)
-export(fit_prop)
+export(run.fitprop)
 importFrom(effsize,cliff.delta)
 importFrom(effsize,cohen.d)
 importFrom(eulerr,euler)
