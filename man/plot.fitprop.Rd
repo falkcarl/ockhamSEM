@@ -6,6 +6,7 @@
 \usage{
 \method{plot}{fitprop}(
   x,
+  ...,
   type = "ecdf",
   whichmod = NULL,
   whichfit = colnames(x$fit_list[[1]]),
@@ -20,6 +21,8 @@
 }
 \arguments{
 \item{x}{Object of class fitprop, as created by fit_prop function.}
+
+\item{...}{Does nothing but to hopefully make this generic function pass R CMD check}
 
 \item{type}{What type of plot to produce?}
 

@@ -518,6 +518,7 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
 
 #' Plot function for fitprop objects
 #' @param x Object of class fitprop, as created by fit_prop function.
+#' @param ... Does nothing but to hopefully make this generic function pass R CMD check
 #' @param type What type of plot to produce?
 #' @param whichmod Index number corresponding to which model(s) to include on the plot
 #' @param whichfit Character vector indicating which indices of model fit to include
@@ -535,7 +536,7 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
 #' @importFrom eulerr euler
 #' @importFrom nVennR plotVenn
 #' @importFrom rlang .data
-plot.fitprop<-function(x,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_list[[1]]),savePlot=FALSE,
+plot.fitprop<-function(x,...,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_list[[1]]),savePlot=FALSE,
                        xlim=c(0,1),samereps=TRUE,cutoff=rep(.1,length(whichfit)),lower.tail=rep(TRUE,length(whichfit)),
                        mod.lab=NULL,mod.brewer.pal="Set1"){
 
@@ -645,7 +646,8 @@ plot.fitprop<-function(x,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_list[
   }
 }
 
-print.fitprop<-function(x){
+#' @export
+print.fitprop<-function(x,...){
   data<-x$fit_list
   nmod<-length(data) # number of models
   nfit<-ncol(data[[1]]) # number of fit measures
@@ -666,15 +668,22 @@ print.fitprop<-function(x){
 
 }
 
+#' Summary function for fitprop objects
+#' @param object Object of class fitprop, as created by fit_prop function.
+#' @param ... Does nothing but to hopefully make this generic function pass R CMD check
+#' @param probs passed to quantile to determine what probabilities to report
+#' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results
+#' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit
+#' @export
 #' @importFrom stats quantile median ks.test na.omit
 #' @importFrom utils str
 #' @importFrom effsize cliff.delta cohen.d
-summary.fitprop<-function(x,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(x$fit_list[[1]])),...){
+summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(object$fit_list[[1]]))){
 
-  data<-x$fit_list
+  data<-object$fit_list
   nmod<-length(data) # number of models
   nfit<-ncol(data[[1]]) # number of fit measures
-  nrep<-x$reps # number of available replications
+  nrep<-object$reps # number of available replications
 
   stats<-list()
   quantiles<-list()
@@ -689,7 +698,7 @@ summary.fitprop<-function(x,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,
     if(samereps){
       qtmp<-NULL
       for(j in 1:nfit){
-        qtmp<-cbind(qtmp, quantile(data[[mod]][!is.na(x$complete_mat[,j]),j],...,probs=probs,na.rm=TRUE))
+        qtmp<-cbind(qtmp, quantile(data[[mod]][!is.na(object$complete_mat[,j]),j],...,probs=probs,na.rm=TRUE))
       }
       colnames(qtmp)<-colnames(data[[mod]])
     } else {
@@ -717,8 +726,8 @@ summary.fitprop<-function(x,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,
       means<-NULL
       medians<-NULL
       for(j in 1:nfit){
-        means<-c(means,mean(data[[mod]][!is.na(x$complete_mat[,j]),j]))
-        medians<-c(medians,median(data[[mod]][!is.na(x$complete_mat[,j]),j]))
+        means<-c(means,mean(data[[mod]][!is.na(object$complete_mat[,j]),j]))
+        medians<-c(medians,median(data[[mod]][!is.na(object$complete_mat[,j]),j]))
       }
       names(means)<-names(medians)<-colnames(data[[mod]])
     } else {
@@ -760,12 +769,12 @@ summary.fitprop<-function(x,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,
         efs[[j]][[indx]]<-list()
         efs[[j]][[indx]]$title<-paste0("Model ",mod, " vs. Model ", mod2)
         if(samereps){
-          tmp<-c(data[[mod]][!is.na(x$complete_mat[,j]),j],data[[mod2]][!is.na(x$complete_mat[,j]),j])
-          grp.tmp<-c(rep(1,sum(!is.na(x$complete_mat[,j]))),rep(2,sum(!is.na(x$complete_mat[,j]))))
+          tmp<-c(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])
+          grp.tmp<-c(rep(1,sum(!is.na(object$complete_mat[,j]))),rep(2,sum(!is.na(object$complete_mat[,j]))))
 
           efs[[j]][[indx]]$d<-cohen.d(tmp,grp.tmp)$estimate
-          efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][!is.na(x$complete_mat[,j]),j],data[[mod2]][!is.na(x$complete_mat[,j]),j])$estimate
-          efs[[j]][[indx]]$ks<-ks.test(data[[mod]][!is.na(x$complete_mat[,j]),j],data[[mod2]][!is.na(x$complete_mat[,j]),j])$statistic
+          efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$estimate
+          efs[[j]][[indx]]$ks<-ks.test(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$statistic
         } else {
           tmp<-c(data[[mod]][,j],data[[mod2]][,j])
           tmp<-na.omit(tmp)
