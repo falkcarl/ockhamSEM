@@ -516,8 +516,20 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
   }
 }
 
-# create some functions for class "fitprop"
-#' @importFrom ggplot2 ggplot aes stat_ecdf scale_color_brewer theme element_blank xlab ylab
+#' Plot function for fitprop objects
+#' @param x Object of class fitprop, as created by fit_prop function.
+#' @param type What type of plot to produce?
+#' @param whichmod Index number corresponding to which model(s) to include on the plot
+#' @param whichfit Character vector indicating which indices of model fit to include
+#' @param savePlot Logical value indicating whether to save plot to a list (TRUE) or just produce plot to output.
+#' @param xlim Vector of length 2 indicating the limits for the x-axis of the plot
+#' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results
+#' @param cutoff Numeric vector indicating what cut value of the fit indice(s) to use for euler plots
+#' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit
+#' @param mod.lab Optional character vector of labels for each model
+#' @param mod.brewer.pal Optional character corresponding to the palette from RColorBrewer to use for the different models
+#' @export
+#' @importFrom ggplot2 ggplot aes stat_ecdf scale_color_brewer theme element_blank xlab ylab xlim ylim
 #' @importFrom stats na.omit
 #' @importFrom tidyr gather
 #' @importFrom eulerr euler
@@ -526,6 +538,9 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
 plot.fitprop<-function(x,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_list[[1]]),savePlot=FALSE,
                        xlim=c(0,1),samereps=TRUE,cutoff=rep(.1,length(whichfit)),lower.tail=rep(TRUE,length(whichfit)),
                        mod.lab=NULL,mod.brewer.pal="Set1"){
+
+  # TO DO: probably match.args for "type", some other input checking
+
   data<-x$fit_list
   nmod<-length(data) # number of models
   nfit<-ncol(data[[1]]) # number of fit measures
