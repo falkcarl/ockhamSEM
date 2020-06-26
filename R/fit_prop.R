@@ -10,8 +10,12 @@
 
 #options(expressions=500000) #increase recursion limit
 
+
 #Helper functions----
 # qq plot against beta(alp,alp) distribution
+
+#' @importFrom stats qbeta
+#' @importFrom graphics plot title
 qqbeta=function(x,alp)
 { xs=sort(x)
   n=length(x)
@@ -25,10 +29,9 @@ qqbeta=function(x,alp)
 # input d>=2, eta>0 (eta=1 for uniform)
 # output correlation matrix rr[][], density proportional to
 #   det(R)^{eta-1}
+#' @importFrom stats rbeta
 rcorcvine<-function(d,eta=1,nmat=1)
 {
-
-
   d<-as.integer(d)
   if(d<=0 || !is.integer(d))
   { stop("The dimension 'd' should be a positive integer!\n") }
@@ -70,6 +73,7 @@ rcorcvine<-function(d,eta=1,nmat=1)
 # input d>=2, eta>0 (eta=1 for uniform)
 # output correlation matrix rr[][], density proportional to
 #   det(R)^{eta-1}
+#' @importFrom stats rbeta rnorm
 rcoronion<-function(d,eta=1)
 {
   d<-as.integer(d)
@@ -109,6 +113,7 @@ rcoronion<-function(d,eta=1)
   rr
 }
 
+#' @importFrom matrixcalc is.positive.definite
 rcorcvine.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
   r.mat<-matrix(NA,d*d,0)
   for(r.indx in nmat){
@@ -127,6 +132,7 @@ rcorcvine.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
   return(r.mat)
 }
 
+#' @importFrom matrixcalc is.positive.definite
 rcoronion.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
   r.mat<-matrix(NA,d*d,0)
   for(r.indx in nmat){
@@ -145,23 +151,7 @@ rcoronion.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
   return(r.mat)
 }
 
-reset_mcmc <- function(d) {
-  #instead of using itr and running mcmc within the function, I've just taken
-  #out the reset to make it compatible with my function signatures. I think this will achieve
-  #the same thing.
-  o = d
-
-  reject <<- 0
-
-  nr<<-as.integer(o*(o-1)/2)
-  xcand <<- rep(0,times=nr)
-  xtmp <<- rep(0,times=nr)
-  for (i in 1:nr) {
-    xcand[i]<<-.5
-    xtmp[i]<<-0
-  }
-}
-
+#' @importFrom stats runif rnorm
 mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
 
   eta_init<-eta
@@ -264,6 +254,8 @@ mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
 #' @param cluster a cluster created by makeCluster() from the parallel package
 #' @return An object of class fitprop
 #' @export
+#' @importFrom lavaan lavInspect lavNames parTable lavaan
+#' @importFrom parallel clusterSetRNGStream clusterSplit parLapply
 fit_prop <- function(..., fit.measure=c("srmr"),
                       saveModel=FALSE, saveR=FALSE,
                       control=list(eta=1, reps=1000,rmethod="onion", onlypos=FALSE, seed=1234),
@@ -367,8 +359,8 @@ fit_prop <- function(..., fit.measure=c("srmr"),
   print("Generate matrices")
   if(!is.null(cluster)){
     clusterSetRNGStream(cluster, control$seed)
-    clusterEvalQ(cluster,require(matrixcalc))
-    clusterExport(cluster, list("rcoronion","rcorcvine"))
+    #clusterEvalQ(cluster,require(ockhamSEM))
+    #clusterExport(cluster, list("rcoronion","rcorcvine"))
     nmat<-clusterSplit(cluster, 1:nsim)
     out_mat<-parLapply(cluster,nmat,mat_func,d=d,eta=eta_val,onlypos=onlypos)
   } else {
@@ -407,7 +399,7 @@ fit_prop <- function(..., fit.measure=c("srmr"),
   for (lavmodel in models) {
     j = j + 1
     if(!is.null(cluster)){
-      clusterEvalQ(cluster,require(lavaan))
+      #clusterEvalQ(cluster,require(lavaan))
       fit_tmp<-parLapply(cluster,1:nsim,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
     } else {
       fit_tmp<-lapply(1:nsim,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
@@ -457,6 +449,7 @@ fit_prop <- function(..., fit.measure=c("srmr"),
 }
 
 # Helper function that generates random matrices
+#' @importFrom matrixcalc is.positive.definite
 genmat<-function(d,eta_val,onlypos,mat_func){
 
   temp=c(mat_func(d,eta_val))
@@ -473,7 +466,8 @@ genmat<-function(d,eta_val,onlypos,mat_func){
   temp
 }
 
-fitmod<-function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
+#' @importFrom lavaan lavaan lavInspect fitMeasures
+fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
   temp_matrix <- matrix(out_mat[,indx],d,d)
   colnames(temp_matrix) <- rownames(temp_matrix) <- vnames
   # added from ShortForm Tabu code; nuke all starting values? Does this work? Not with older lavaan version
@@ -491,7 +485,8 @@ fitmod<-function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
     #lavmodel@SampleStats@icov[[1]]<-solve(temp_matrix)
     #lavmodel@SampleStats@WLS.obs[[1]]<-lav_matrix_vech(temp_matrix)
 
-    my_fitted_model<-lavaan(sample.cov=temp_matrix, sample.nobs=lavInspect(lavmodel,"nobs"),
+    my_fitted_model<-lavaan(sample.cov=temp_matrix,
+                                    sample.nobs=lavInspect(lavmodel,"nobs"),
                             #slotData = lavmodel@Data,
                             #slotSampleStats = lavmodel@SampleStats,
                             #slotModel = lavmodel@Model,
@@ -522,6 +517,12 @@ fitmod<-function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
 }
 
 # create some functions for class "fitprop"
+#' @importFrom ggplot2 ggplot aes stat_ecdf scale_color_brewer theme element_blank xlab ylab
+#' @importFrom stats na.omit
+#' @importFrom tidyr gather
+#' @importFrom eulerr euler
+#' @importFrom nVennR plotVenn
+#' @importFrom rlang .data
 plot.fitprop<-function(x,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_list[[1]]),savePlot=FALSE,
                        xlim=c(0,1),samereps=TRUE,cutoff=rep(.1,length(whichfit)),lower.tail=rep(TRUE,length(whichfit)),
                        mod.lab=NULL,mod.brewer.pal="Set1"){
@@ -563,7 +564,9 @@ plot.fitprop<-function(x,type="ecdf",whichmod=NULL,whichfit=colnames(x$fit_list[
         dat<-na.omit(dat)
       }
       dat<-gather(dat,"variable","value",whichmod)
-      graph<-ggplot(dat,aes(x=value))+ stat_ecdf(aes(linetype=variable, color=variable),na.rm=TRUE,size=.7) + scale_color_brewer(palette=mod.brewer.pal)
+      graph<-ggplot(dat,aes(x=.data$value))+
+        stat_ecdf(aes(linetype=.data$variable, color=.data$variable),na.rm=TRUE,size=.7) +
+        scale_color_brewer(palette=mod.brewer.pal)
 
       if(lower.tail[m]){
         graph<-graph+ xlim(xlim[1],xlim[2])
@@ -648,6 +651,9 @@ print.fitprop<-function(x){
 
 }
 
+#' @importFrom stats quantile median ks.test na.omit
+#' @importFrom utils str
+#' @importFrom effsize cliff.delta cohen.d
 summary.fitprop<-function(x,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(x$fit_list[[1]])),...){
 
   data<-x$fit_list
@@ -742,7 +748,7 @@ summary.fitprop<-function(x,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,
           tmp<-c(data[[mod]][!is.na(x$complete_mat[,j]),j],data[[mod2]][!is.na(x$complete_mat[,j]),j])
           grp.tmp<-c(rep(1,sum(!is.na(x$complete_mat[,j]))),rep(2,sum(!is.na(x$complete_mat[,j]))))
 
-          efs[[j]][[indx]]$d<-effsize::cohen.d(tmp,grp.tmp)$estimate
+          efs[[j]][[indx]]$d<-cohen.d(tmp,grp.tmp)$estimate
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][!is.na(x$complete_mat[,j]),j],data[[mod2]][!is.na(x$complete_mat[,j]),j])$estimate
           efs[[j]][[indx]]$ks<-ks.test(data[[mod]][!is.na(x$complete_mat[,j]),j],data[[mod2]][!is.na(x$complete_mat[,j]),j])$statistic
         } else {
@@ -750,7 +756,7 @@ summary.fitprop<-function(x,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,
           tmp<-na.omit(tmp)
           grp.tmp<-c(rep(1,nrep),rep(2,nrep))
           grp.tmp<-grp.tmp[-attr(tmp,"na.action")]
-          efs[[j]][[indx]]$d<-effsize::cohen.d(tmp,grp.tmp)$estimate
+          efs[[j]][[indx]]$d<-cohen.d(tmp,grp.tmp)$estimate
 
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][,j],data[[mod2]][,j])$estimate
           efs[[j]][[indx]]$ks<-str(ks.test(data[[mod]][,j],data[[mod2]][,j]))$statistic

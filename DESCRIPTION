@@ -1,6 +1,6 @@
 Package: ockhamSEM
 Type: Package
-Title: Tools for studying fit propensity in structural equation modeling.
+Title: Tools for studying fit propensity in structural equation modeling
 Version: 0.1.0
 Author: Carl F. Falk and Michael Muthukrishna. Need to credit code
   from Harry Joe and possibly Kris Preacher.
@@ -13,11 +13,14 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: 
+    stats,
     lavaan (>= 0.6-3),
     ggplot2,
     eulerr,
     matrixcalc,
     tidyr,
     effsize,
-    parallel
+    parallel,
+    nVennR,
+    rlang
 RoxygenNote: 7.1.0
