@@ -123,6 +123,24 @@ rcoronion.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
   return(r.mat)
 }
 
+mcmc.args.default<-function(nchains, d, args=NULL){
+
+  control<-list(
+    iter = 5000000, # total number of iterations to run
+    miniter = 10000, # min number of iterations per chain
+    dim = d, # dimension of covariance matrix
+    jmpsize = mcmc.jump.defaults(d)
+  )
+
+  # override if any custom arguments provided
+  control[names(args)] <- args
+
+  # divide iterations per chain
+  control$iter<-max(ceiling(control$iter/nchains),control$miniter)
+
+  return(control)
+}
+
 mcmc.jump.defaults<-function(o){
   if (o==3) {
     jmpsize=.56
@@ -142,7 +160,7 @@ mcmc.jump.defaults<-function(o){
     jmpsize=.21
   } else if (o==11) {
     jmpsize=.19
-  } else if (o==12 & o <15) {
+  } else if (o>=12 & o <15) {
     jmpsize=.175
   } else if (o==15) {
     jmpsize=.12
@@ -153,18 +171,44 @@ mcmc.jump.defaults<-function(o){
   return(jmpsize)
 }
 
+onion.args.default<-function(d,args=NULL){
+
+  control<-list(
+    dim = d, # dimension of covariance matrix
+    covMethod = "onion",
+    eta = 1, # uniform
+    rangeVar = c(1,1) # unit variance per variable
+  )
+
+  # override if any custom arguments provided
+  control[names(args)] <- args
+
+  return(control)
+
+}
+
+clustergen.args.default<-function(d,args=NULL){
+
+  control<-list(
+    dim = d # dimension of covariance matrix
+  )
+
+  # override if any custom arguments provided
+  control[names(args)] <- args
+
+  return(control)
+}
+
 #' @importFrom stats runif rnorm
-mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
+mcmc <- function(nmat, dim, iter, jmpsize, reject=NULL, onlypos=NULL) {
 
-  eta_init<-eta
-  thin<-floor(eta/length(nmat))
+  iter_init<-iter
+  thin<-floor(iter/length(nmat))
 
-  r.mat<-matrix(NA,d*d,0)
+  r.mat<-matrix(NA,dim*dim,0)
   #eta here is the number of iterations to go through before outputting the matrix (i.e., thinning)
-  o = d
+  o = dim
   r = matrix(0,o,o)
-
-  jmpsize<-mcmc.jump.defaults(o)
 
   if(is.null(reject)){
     reject <- 0
@@ -178,7 +222,7 @@ mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
     xtmp <- rep(0,times=nr)
   }
 
-  while(eta>=0){
+  while(iter>=0){
     tmp <- rnorm(nr)
     xtemp <- runif(1)
     xtmp<-(xtemp^(1/nr))*tmp/as.vector(sqrt(crossprod(tmp,tmp)))
@@ -211,9 +255,9 @@ mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
       #if (is.positive.definite(r)) {
 
         xcand<-ycand
-        eta<-eta-1
+        iter<-iter-1
         # multiple of thinning
-        if((eta %% thin & eta < eta_init)==0){
+        if((iter %% thin & iter < iter_init)==0){
           r.mat<-cbind(r.mat,c(r))
         }
       }
@@ -224,18 +268,29 @@ mcmc <- function(nmat = 1, d, eta=1, reject=NULL, onlypos=NULL) {
 
 # Helper function that generates random matrices
 #' @importFrom matrixcalc is.positive.definite
-genmat<-function(d,eta_val,onlypos,mat_func){
+#' @importFrom clusterGeneration genPositiveDefMat
+genmat<-function(nmat=1, rmethod=c("mcmc","onion","clustergen"), control, onlypos=FALSE){
 
-  temp=c(mat_func(d,eta_val))
-  if (onlypos) {
-    temp = (temp+1)/2
-  }
+  rmethod <- match.arg(rmethod)
 
-  while(!is.positive.definite(matrix(temp,d,d))){
-    temp=c(mat_func(d,eta_val))
-    if (onlypos) {
-      temp = (temp+1)/2
+  if(rmethod=="mcmc"){
+    r.mat <- mcmc(nmat, control$dim, control$iter, control$jmpsize, onlypos=onlypos)
+  } else if (rmethod=="onion" | rmethod=="clustergen"){
+    r.mat<-matrix(NA,control$dim*control$dim,0)
+    for(r.indx in nmat){
+      r <- do.call("genPositiveDefMat",control)$Sigma
+      #r<-rcoronion(d,eta)
+      if (onlypos) {
+        r = (r+1)/2
+      }
+      while(!is.positive.definite(r)){
+        r<-c(do.call("genPositiveDefMat",control)$Sigma)
+        if (onlypos) {
+          r = (r+1)/2
+        }
+      }
+      r.mat<-cbind(r.mat,as.vector(r))
     }
   }
-  temp
+  return(r.mat)
 }

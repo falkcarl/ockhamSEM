@@ -1,19 +1,31 @@
 #' Run fit propensity analyses
 #'
 #' @param ... models to be fit to the same data of class lavaan
-#' @param fit.measure character string or vector that indicates which fit measure to extract from fitted models
+#' @param fit.measure character vector that indicates which fit measure to extract from fitted models
+#' @param rmethod string indicating the type of random correlation generation approach. Choices are "mcmc" (default), "onion", and "clustergen". See details.
+#' @param reps number of random correlation matrices to generate and fit models to
+#' @param onlypos logical value indicating whether to generate only positive correlation matrices
+#' @param seed random number seed used by set.seed or parallel package
+#' @param mcmc.args named list of arguments that controls options for "mcmc" correlation matrix generation. See details.
+#' @param clustergen.args named list of arguments that controls generation of correlation matrices if "clustergen" is used. See details.
 #' @param saveModel logical value indicating whether the to save fitted models for later examination
 #' @param saveR logical value indicating whether to save random correlation matrices
-#' @param control list of parameters for generation of random correlation matrices
 #' @param cluster a cluster created by makeCluster() from the parallel package
 #' @return An object of class fitprop
 #' @export
 #' @importFrom lavaan lavInspect lavNames parTable lavaan
-#' @importFrom parallel clusterSetRNGStream clusterSplit parLapply
-run.fitprop <- function(..., fit.measure=c("srmr"),
-                      saveModel=FALSE, saveR=FALSE,
-                      control=list(eta=1, reps=1000,rmethod="onion", onlypos=FALSE, seed=1234),
-                      cluster=NULL) {
+#' @import parallel
+run.fitprop <- function(...,
+                        fit.measure=c("srmr"),
+                        rmethod=c("onion","mcmc","clustergen"),
+                        reps=1000,
+                        onlypos=FALSE,
+                        seed=1234,
+                        mcmc.args = list(),
+                        clustergen.args = list(),
+                        saveModel=FALSE,
+                        saveR=FALSE,
+                        cluster=NULL) {
 
   fun.call<-match.call()
   models <- list(...)
@@ -44,56 +56,37 @@ run.fitprop <- function(..., fit.measure=c("srmr"),
     stop("fit.measure should be a character string or vector indicating the measure to be extracted from fitMeasures()")
   }
 
-  #This bit is only for mcmc generation method
-  o=d
-  jmpsize<-mcmc.jump.defaults(o)
-
-  # check control
-  if(is.null(control[["eta"]])){control[["eta"]]<-1}
-  if(is.null(control[["reps"]])){control[["reps"]]<-5000}
-  if(is.null(control[["rmethod"]])){control[["rmethod"]]<-"onion"}
-  if(is.null(control[["onlypos"]])){control[["onlypos"]]<-FALSE}
-  if(is.null(control[["seed"]])){control[["seed"]]<-1234}
-  if(is.null(control[["iter"]])){control[["iter"]]<-5000000}
-  if(is.null(control[["miniter"]])){control[["miniter"]]<-10000}
-  onlypos = as.logical(control["onlypos"])
-
   #Set matrix for storing outputs
-  nsim = as.numeric(control["reps"])
   fit_list = vector("list", n.models)
   for (i in 1:length(fit_list)) {
-    fit_list[[i]] = matrix(0,nsim,length(fit.measure))
+    fit_list[[i]] = matrix(0,reps,length(fit.measure))
     colnames(fit_list[[i]]) <- fit.measure
   }
 
-  eta_val = as.numeric(control["eta"])
-
   mat_func = rcoronion.wrap
-  if(control["rmethod"]=="onion") {
-    mat_func = rcoronion.wrap
-  } else if (control["rmethod"]=="vine") {
-    mat_func = rcorcvine.wrap
-  } else if (control["rmethod"]=="mcmc") {
-    mat_func = mcmc
+  if(rmethod=="onion") {
+    control <- onion.args.default(d)
+  } else if (rmethod=="mcmc") {
     if(!is.null(cluster)){
-      eta_val <- max(ceiling(control$iter/length(cluster)),control$miniter)
+      control <- mcmc.args.default(length(cluster),d,mcmc.args)
     } else {
-      eta_val <- control$iter
+      control <- mcmc.args.default(1,d,mcmc.args)
     }
-
-  } else {
-    stop(paste('Bad matrix function:', control["rmethod"]))
+  } else if (rmethod == "clustergen") {
+    control <- clustergen.args.default(d,clustergen.args)
   }
 
   #Generate the matrices
   print("Generate matrices")
   if(!is.null(cluster)){
-    clusterSetRNGStream(cluster, control$seed)
-    nmat<-clusterSplit(cluster, 1:nsim)
-    out_mat<-parLapply(cluster,nmat,mat_func,d=d,eta=eta_val,onlypos=onlypos)
+    clusterSetRNGStream(cluster, seed)
+    nmat<-clusterSplit(cluster, 1:reps)
+    out_mat <- parLapply(cluster, nmat, genmat, rmethod=rmethod, control=control, onlypos=onlypos)
+    #out_mat<-parLapply(cluster,nmat,mat_func,d=d,eta=eta_val,onlypos=onlypos)
   } else {
-    set.seed(control$seed)
-    out_mat<-lapply(list(1:nsim),mat_func,d=d,eta=eta_val,onlypos=onlypos)
+    set.seed(seed)
+    out_mat <- lapply(list(1:reps), genmat, rmethod=rmethod, control=control, onlypos=onlypos)
+    #out_mat<-lapply(list(1:reps),mat_func,d=d,eta=eta_val,onlypos=onlypos)
   }
   out_mat<-do.call(cbind,out_mat)
   row.names(out_mat)<-NULL
@@ -125,9 +118,9 @@ run.fitprop <- function(..., fit.measure=c("srmr"),
   for (lavmodel in models) {
     j = j + 1
     if(!is.null(cluster)){
-      fit_tmp<-parLapply(cluster,1:nsim,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
+      fit_tmp<-parLapply(cluster,1:reps,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
     } else {
-      fit_tmp<-lapply(1:nsim,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
+      fit_tmp<-lapply(1:reps,fitmod,lavmodel=lavmodel,out_mat=out_mat,vnames=vnames,j=j,saveModel=saveModel,d=d,fit.measure=fit.measure)
     }
     fit_list[[j]]<-matrix(unlist(fit_tmp),ncol=length(fit.measure),byrow=TRUE)
     colnames(fit_list[[j]])<-fit.measure
@@ -139,7 +132,7 @@ run.fitprop <- function(..., fit.measure=c("srmr"),
 
   # Process number of missing values (if any) per model and fit index
   na_list<-list()
-  complete_mat<-matrix(1,nrow=control[["reps"]],ncol=n.fit)
+  complete_mat<-matrix(1,nrow=reps,ncol=n.fit)
   for(j in 1:length(fit_list)){
     na_list[[j]]<-is.na(fit_list[[j]])
     complete_mat[which(is.na(fit_list[[j]]))]<-NA
@@ -147,10 +140,9 @@ run.fitprop <- function(..., fit.measure=c("srmr"),
 
   out<-list()
   out$fun.call<-fun.call
-  out$eta=control$eta
-  out$reps=control$reps
-  out$rmethod=control$rmethod
-  out$onlypos=control$onlypos
+  out$reps=reps
+  out$rmethod=rmethod
+  out$onlypos=onlypos
   out$nfit=n.fit
 
   out$na_list<-na_list
@@ -160,7 +152,7 @@ run.fitprop <- function(..., fit.measure=c("srmr"),
 
   if(saveR){
     out$R<-list()
-    for(j in 1:nsim){
+    for(j in 1:reps){
       out$R[[j]]<-matrix(out_mat[,j],d,d)
     }
   }
@@ -321,7 +313,6 @@ print.fitprop<-function(x,...){
 "Number of replications =   ", nrep, "\n",
 "Options for R generation\n",
 "  method =                ", x$rmethod, "\n",
-"  eta =                   ", x$eta, "\n",
 "  Only positive R?        ", x$onlypos, "\n"
 )
 
