@@ -83,11 +83,9 @@ run.fitprop <- function(...,
     clusterSetRNGStream(cluster, seed)
     nmat<-clusterSplit(cluster, 1:reps)
     out_mat <- parLapply(cluster, nmat, genmat, rmethod=rmethod, control=control, onlypos=onlypos)
-    #out_mat<-parLapply(cluster,nmat,mat_func,d=d,eta=eta_val,onlypos=onlypos)
   } else {
     set.seed(seed)
     out_mat <- lapply(list(1:reps), genmat, rmethod=rmethod, control=control, onlypos=onlypos)
-    #out_mat<-lapply(list(1:reps),mat_func,d=d,eta=eta_val,onlypos=onlypos)
   }
   out_mat<-do.call(cbind,out_mat)
   row.names(out_mat)<-NULL
@@ -106,8 +104,10 @@ run.fitprop <- function(...,
                             sample.cov=temp_matrix,
                             sample.nobs= nobs,
                             slotOptions = opt)
-                            #slotModel = lavmodel@Model)
+
+    # update may not work with older lavaan versions
     #my_fitted_model<-update(lavmodel, sample.cov=temp_matrix, se="none")
+
     models[[j]]<-my_fitted_model
     j<-j+1
   }
@@ -226,7 +226,6 @@ plot.fitprop<-function(x,...,type=c("ecdf","euler","nVennR"),whichmod=NULL,which
 
     # generate plots
     if(type=="ecdf"){
-      #dat<-melt(dat,na.rm=TRUE,id.vars="id")
       if(samereps){
         dat<-na.omit(dat)
       }

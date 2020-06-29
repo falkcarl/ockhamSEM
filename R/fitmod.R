@@ -17,22 +17,15 @@ fitmod <- function(indx,lavmodel,out_mat,vnames,j,saveModel,d,fit.measure){
     lavmodel@Options$se="none"
     lavmodel@Options$start="default"
     lavmodel@Options$do.fit=TRUE
-    #lavmodel@Data
-    #lavmodel@SampleStats
-    #lavmodel@SampleStats@cov[[1]]<-temp_matrix
-    #lavmodel@SampleStats@icov[[1]]<-solve(temp_matrix)
-    #lavmodel@SampleStats@WLS.obs[[1]]<-lav_matrix_vech(temp_matrix)
 
     my_fitted_model<-lavaan(sample.cov=temp_matrix,
                             sample.nobs=lavInspect(lavmodel,"nobs"),
-                            #slotData = lavmodel@Data,
-                            #slotSampleStats = lavmodel@SampleStats,
-                            #slotModel = lavmodel@Model,
                             slotOptions = lavmodel@Options,
                             slotParTable = lavmodel@ParTable,
                             slotCache = lavmodel@Cache)
 
     if(my_fitted_model@optim$converged){
+
       #Store fit values
       fit_out <- fitMeasures(my_fitted_model, fit.measure)
     } else {

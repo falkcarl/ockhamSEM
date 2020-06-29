@@ -1,130 +1,5 @@
 # Functions for generation of random correlation matrices
 
-# input d>=2, eta>0 (eta=1 for uniform)
-# output correlation matrix rr[][], density proportional to
-#   det(R)^{eta-1}
-#' @importFrom stats rbeta
-rcorcvine<-function(d,eta=1)
-{
-  d<-as.integer(d)
-  if(d<=0 || !is.integer(d))
-  { stop("The dimension 'd' should be a positive integer!\n") }
-  if(eta<=0)
-  { stop("'eta' should be positive!\n") }
-
-  #handling of d=1 and d=2
-  if(d==1)
-  { rr<-matrix(1,1,1); return(rr) }
-  if(d==2)
-  { rho<-2*rbeta(1,eta,eta)-1
-    rr<-matrix(c(1,rho,rho,1),2,2); return(rr)
-  }
-  rr<-matrix(0,d,d)
-  # matrix of partial correlations as generated
-  prr<-matrix(0,d,d)
-  diag(rr)<-1
-  for(i in 2:d)
-  { alp<-eta+(d-2)/2
-    rr[1,i]<-2*rbeta(1,alp,alp)-1
-    rr[i,1]<-rr[1,i]
-    prr[1,i]<-rr[1,i]
-  }
-  for(m in 2:(d-1))
-  { alp<-eta+(d-1-m)/2
-    for(i in (m+1):d)
-    { prr[m,i]<-2*rbeta(1,alp,alp)-1
-      # back calculate thru lower order partials
-      tem<-prr[m,i]
-      for(k in (m-1):1)
-      { tem<-prr[k,m]*prr[k,i]+tem*sqrt((1-prr[k,m]^2)*(1-prr[k,i]^2)) }
-      rr[m,i]<-tem
-      rr[i,m]<-rr[m,i]
-    }
-  }
-  return(rr)
-}
-
-# input d>=2, eta>0 (eta=1 for uniform)
-# output correlation matrix rr[][], density proportional to
-#   det(R)^{eta-1}
-#' @importFrom stats rbeta rnorm
-rcoronion<-function(d,eta=1)
-{
-  d<-as.integer(d)
-  if(d<=0 || !is.integer(d))
-  { stop("The dimension 'd' should be a positive integer!\n") }
-  if(eta<=0)
-  { stop("'eta' should be positive!\n") }
-
-  #handling of d=1 and d=2
-  if(d==1)
-  { rr<-matrix(1,1,1); return(rr) }
-  if(d==2)
-  { rho<-2*rbeta(1,eta,eta)-1
-    rr<-matrix(c(1,rho,rho,1),2,2); return(rr)
-  }
-  rr<-matrix(0,d,d)
-  beta<-eta+(d-2)/2
-  # step 1
-  r12<-2*rbeta(1,beta,beta)-1
-  rr<-matrix(c(1,r12,r12,1),2,2)
-  # iterative steps
-  for(m in 2:(d-1))
-  { beta<-beta-0.5
-    y<-rbeta(1,m/2,beta)
-    z<-rnorm(m,0,1)
-    znorm<-sqrt(sum(z^2))
-    # random on surface of unit sphere
-    z<-z/znorm
-    w=sqrt(y)*z
-    # can spped up by programming incremental Cholesky?
-    rhalf<-chol(rr)
-    qq<-w%*%rhalf
-    rr<-cbind(rr,t(qq))
-    rr<-rbind(rr,c(qq,1))
-  }
-  # return rr
-  rr
-}
-
-#' @importFrom matrixcalc is.positive.definite
-rcorcvine.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
-  r.mat<-matrix(NA,d*d,0)
-  for(r.indx in nmat){
-    r<-rcorcvine(d,eta)
-    if (onlypos) {
-      r = (r+1)/2
-    }
-    r.mat<-cbind(r.mat,c(r))
-    while(!is.positive.definite(matrix(r,d,d))){
-      r<-c(rcorcvine(d,eta))
-      if (onlypos) {
-        r = (r+1)/2
-      }
-    }
-  }
-  return(r.mat)
-}
-
-#' @importFrom matrixcalc is.positive.definite
-rcoronion.wrap<-function(nmat=1, d, eta=1, onlypos=FALSE){
-  r.mat<-matrix(NA,d*d,0)
-  for(r.indx in nmat){
-    r<-rcoronion(d,eta)
-    if (onlypos) {
-      r = (r+1)/2
-    }
-    while(!is.positive.definite(matrix(r,d,d))){
-      r<-c(rcoronion(d,eta))
-      if (onlypos) {
-        r = (r+1)/2
-      }
-    }
-    r.mat<-cbind(r.mat,c(r))
-  }
-  return(r.mat)
-}
-
 mcmc.args.default<-function(nchains, d, args=NULL){
 
   control<-list(
@@ -208,7 +83,7 @@ mcmc <- function(nmat, dim, iter, jmpsize, reject=NULL, onlypos=NULL) {
   thin<-floor(iter/length(nmat))
 
   r.mat<-matrix(NA,dim*dim,0)
-  #eta here is the number of iterations to go through before outputting the matrix (i.e., thinning)
+
   o = dim
   r = matrix(0,o,o)
 
@@ -231,7 +106,7 @@ mcmc <- function(nmat, dim, iter, jmpsize, reject=NULL, onlypos=NULL) {
 
     ycand <- xcand + jmpsize*xtmp
 
-    # this is the only place I see where positive correlations are enforced, and this seems unnecessary
+    # this is the only place I see where positive correlations are enforced
     if(onlypos){
       yflag<-ifelse(all(ycand>0 & ycand<1), 0, 1)
     } else {
@@ -252,9 +127,10 @@ mcmc <- function(nmat, dim, iter, jmpsize, reject=NULL, onlypos=NULL) {
       diag(r)<-1
 
       ev<-eigen(r)$values
+      # other ways to check positive definiteness that have been tried:
       #if(!(any(ev<.08))){
-      if(!(any(ev<.01))){
       #if (is.positive.definite(r)) {
+      if(!(any(ev<.01))){
 
         xcand<-ycand
         iter<-iter-1
@@ -281,7 +157,6 @@ genmat<-function(nmat=1, rmethod=c("mcmc","onion","clustergen"), control, onlypo
     r.mat<-matrix(NA,control$dim*control$dim,0)
     for(r.indx in nmat){
       r <- do.call("genPositiveDefMat",control)$Sigma
-      #r<-rcoronion(d,eta)
       if (onlypos) {
         r = (r+1)/2 # ad-hoc correction to ensure positive manifold
       }
