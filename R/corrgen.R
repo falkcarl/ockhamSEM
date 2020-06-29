@@ -1,3 +1,5 @@
+# Functions for generation of random correlation matrices
+
 # input d>=2, eta>0 (eta=1 for uniform)
 # output correlation matrix rr[][], density proportional to
 #   det(R)^{eta-1}
@@ -267,7 +269,7 @@ mcmc <- function(nmat, dim, iter, jmpsize, reject=NULL, onlypos=NULL) {
 }
 
 # Helper function that generates random matrices
-#' @importFrom matrixcalc is.positive.definite
+#' @importFrom matrixcalc is.positive.definite is.symmetric.matrix
 #' @importFrom clusterGeneration genPositiveDefMat
 genmat<-function(nmat=1, rmethod=c("mcmc","onion","clustergen"), control, onlypos=FALSE){
 
@@ -281,12 +283,18 @@ genmat<-function(nmat=1, rmethod=c("mcmc","onion","clustergen"), control, onlypo
       r <- do.call("genPositiveDefMat",control)$Sigma
       #r<-rcoronion(d,eta)
       if (onlypos) {
-        r = (r+1)/2
+        r = (r+1)/2 # ad-hoc correction to ensure positive manifold
+      }
+      if(!is.symmetric.matrix(r)){
+        r<-round(r,5) # ad-hoc fix
       }
       while(!is.positive.definite(r)){
         r<-c(do.call("genPositiveDefMat",control)$Sigma)
         if (onlypos) {
-          r = (r+1)/2
+          r = (r+1)/2 # ad-hoc correction to ensure positive manifold
+        }
+        if(!is.symmetric.matrix(r)){
+          r<-round(r,5) # ad-hoc fix
         }
       }
       r.mat<-cbind(r.mat,as.vector(r))

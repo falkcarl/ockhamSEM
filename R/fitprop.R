@@ -1,3 +1,5 @@
+# Main UI functions
+
 #' Run fit propensity analyses
 #'
 #' @param ... models to be fit to the same data of class lavaan
@@ -7,7 +9,7 @@
 #' @param onlypos logical value indicating whether to generate only positive correlation matrices
 #' @param seed random number seed used by set.seed or parallel package
 #' @param mcmc.args named list of arguments that controls options for "mcmc" correlation matrix generation. See details.
-#' @param clustergen.args named list of arguments that controls generation of correlation matrices if "clustergen" is used. See details.
+#' @param clustergen.args named list of arguments that controls generation of correlation matrices if "onion" or "clustergen" is used. See details.
 #' @param saveModel logical value indicating whether the to save fitted models for later examination
 #' @param saveR logical value indicating whether to save random correlation matrices
 #' @param cluster a cluster created by makeCluster() from the parallel package
@@ -63,9 +65,8 @@ run.fitprop <- function(...,
     colnames(fit_list[[i]]) <- fit.measure
   }
 
-  mat_func = rcoronion.wrap
   if(rmethod=="onion") {
-    control <- onion.args.default(d)
+    control <- onion.args.default(d,clustergen.args)
   } else if (rmethod=="mcmc") {
     if(!is.null(cluster)){
       control <- mcmc.args.default(length(cluster),d,mcmc.args)

@@ -33,7 +33,7 @@ run.fitprop(
 
 \item{mcmc.args}{named list of arguments that controls options for "mcmc" correlation matrix generation. See details.}
 
-\item{clustergen.args}{named list of arguments that controls generation of correlation matrices if "clustergen" is used. See details.}
+\item{clustergen.args}{named list of arguments that controls generation of correlation matrices if "onion" or "clustergen" is used. See details.}
 
 \item{saveModel}{logical value indicating whether the to save fitted models for later examination}
 
