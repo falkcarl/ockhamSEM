@@ -24,26 +24,72 @@
 
 \item{...}{Does nothing but to hopefully make this generic function pass R CMD check}
 
-\item{type}{What type of plot to produce?}
+\item{type}{What type of plot to produce? Options include \code{"ecdf"} or \code{"euler"}. \code{"nVennR"}
+is not yet operational.}
 
-\item{whichmod}{Index number corresponding to which model(s) to include on the plot}
+\item{whichmod}{Index number corresponding to which model(s) to include on the plot. Defaults to all models.}
 
-\item{whichfit}{Character vector indicating which indices of model fit to include}
+\item{whichfit}{Character vector indicating which indices of model fit to include. Defaults to all saved indices.}
 
 \item{savePlot}{Logical value indicating whether to save plot to a list (TRUE) or just produce plot to output.}
 
-\item{xlim}{Vector of length 2 indicating the limits for the x-axis of the plot}
+\item{xlim}{Numeric vector of length 2 indicating the limits for the x-axis of the plot.}
 
-\item{samereps}{Logical value indicating whether to use only results from replications in which all selected models yielded results}
+\item{samereps}{Logical value indicating whether to use only results from replications in which all selected models yielded results.}
 
-\item{cutoff}{Numeric vector indicating what cut value of the fit indice(s) to use for euler plots}
+\item{cutoff}{Numeric vector indicating what cut value of the fit indice(s) to use for euler plots.}
 
-\item{lower.tail}{Logical vector indicating whether lower values of each fit index corresponds to good fit}
+\item{lower.tail}{Logical vector indicating whether lower values of each fit index corresponds to good fit.}
 
-\item{mod.lab}{Optional character vector of labels for each model}
+\item{mod.lab}{Optional character vector of labels for each model.}
 
-\item{mod.brewer.pal}{Optional character corresponding to the palette from RColorBrewer to use for the different models}
+\item{mod.brewer.pal}{Optional string corresponding to the palette from RColorBrewer to use for the different models. e.g.,
+see \code{\link[RColorBrewer]{display.brewer.all}}.}
 }
 \description{
 Plot function for fitprop objects
+}
+\examples{
+\donttest{
+
+# Set up a covariance matrix to fit models to
+p<-3 # number of variables
+temp_mat <- diag(p) # identity matrix
+colnames(temp_mat) <- rownames(temp_mat) <- paste0("V", seq(1, p))
+
+# Define and fit two models using lavaan package
+mod1a <- 'V3 ~ V1 + V2
+  V1 ~~ 0*V2'
+mod2a <- 'V3 ~ V1
+  V2 ~ V3'
+
+mod1a.fit <- sem(mod1a, sample.cov=temp_mat, sample.nobs=500)
+mod2a.fit <- sem(mod2a, sample.cov=temp_mat, sample.nobs=500)
+
+# Run fit propensity analysis
+# Onion approach, save srmr and CFI
+res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure=c("srmr","cfi"),
+  rmethod="onion",reps=1000)
+summary(res)
+
+# Generate a variety of plots
+# ecdf - only srmr
+plot(res, whichfit = "srmr")
+
+# ecdf - both srmr and cfi, properly indicating that higher values of cfi are better
+plot(res, lower.tail=c(TRUE,FALSE))
+
+# ecdf change color palette, save plot to object, then display or change
+myplot<-plot(res, whichfit="cfi",
+             lower.tail=FALSE,
+             mod.brewer.pal="Dark2",
+             savePlot=TRUE)
+myplot[[1]] # saved to the first slot
+myplot[[1]] + theme_bw() # change something, like the theme
+
+# euler plot
+# cfi - which models have cfi of .5 or better?
+plot(res, type="euler", whichfit="cfi", lower.tail=FALSE, cutoff=.5)
+
+}
 }

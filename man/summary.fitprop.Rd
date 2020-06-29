@@ -13,16 +13,52 @@
 )
 }
 \arguments{
-\item{object}{Object of class fitprop, as created by run.fitprop function.}
+\item{object}{Object of class fitprop, as created by \code{\link[ockhamSEM]{run.fitprop}} function.}
 
-\item{...}{Does nothing but to hopefully make this generic function pass R CMD check}
+\item{...}{Does nothing but to hopefully make this generic function pass R CMD check.}
 
-\item{probs}{passed to quantile to determine what probabilities to report}
+\item{probs}{Vector passed to quantile to determine what probabilities to report.}
 
-\item{samereps}{Logical value indicating whether to use only results from replications in which all selected models yielded results}
+\item{samereps}{Logical value indicating whether to use only results from replications in which all selected models yielded results.}
 
-\item{lower.tail}{Logical vector indicating whether lower values of each fit index corresponds to good fit}
+\item{lower.tail}{Logical vector indicating whether lower values of each fit index corresponds to good fit.}
 }
 \description{
 Summary function for fitprop objects
+}
+\examples{
+\donttest{
+
+# Set up a covariance matrix to fit models to
+p<-3 # number of variables
+temp_mat <- diag(p) # identity matrix
+colnames(temp_mat) <- rownames(temp_mat) <- paste0("V", seq(1, p))
+
+# Define and fit two models using lavaan package
+mod1a <- 'V3 ~ V1 + V2
+  V1 ~~ 0*V2'
+mod2a <- 'V3 ~ V1
+  V2 ~ V3'
+
+mod1a.fit <- sem(mod1a, sample.cov=temp_mat, sample.nobs=500)
+mod2a.fit <- sem(mod2a, sample.cov=temp_mat, sample.nobs=500)
+
+# Run fit propensity analysis
+# Onion approach, save srmr and CFI
+res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure=c("srmr","cfi"),
+  rmethod="onion",reps=1000)
+
+# Generate summaries
+summary(res)
+
+# sort quantiles differently for srmr and cfi
+# Use different quantiles
+summary(res, probs = c(0,.25,.5,.75,1), lower.tail=c(TRUE,FALSE))
+
+# If some models failed to converge, this would result in
+# summaries computed on possibly different replications:
+# Use different quantiles
+summary(res, samereps=FALSE, lower.tail=c(TRUE,FALSE))
+
+}
 }
