@@ -7,22 +7,37 @@
 run.fitprop(
   ...,
   fit.measure = c("srmr"),
+  rmethod = c("onion", "mcmc", "clustergen"),
+  reps = 1000,
+  onlypos = FALSE,
+  seed = 1234,
+  mcmc.args = list(),
+  clustergen.args = list(),
   saveModel = FALSE,
   saveR = FALSE,
-  control = list(eta = 1, reps = 1000, rmethod = "onion", onlypos = FALSE, seed = 1234),
   cluster = NULL
 )
 }
 \arguments{
 \item{...}{models to be fit to the same data of class lavaan}
 
-\item{fit.measure}{character string or vector that indicates which fit measure to extract from fitted models}
+\item{fit.measure}{character vector that indicates which fit measure to extract from fitted models}
+
+\item{rmethod}{string indicating the type of random correlation generation approach. Choices are "mcmc" (default), "onion", and "clustergen". See details.}
+
+\item{reps}{number of random correlation matrices to generate and fit models to}
+
+\item{onlypos}{logical value indicating whether to generate only positive correlation matrices}
+
+\item{seed}{random number seed used by set.seed or parallel package}
+
+\item{mcmc.args}{named list of arguments that controls options for "mcmc" correlation matrix generation. See details.}
+
+\item{clustergen.args}{named list of arguments that controls generation of correlation matrices if "onion" or "clustergen" is used. See details.}
 
 \item{saveModel}{logical value indicating whether the to save fitted models for later examination}
 
 \item{saveR}{logical value indicating whether to save random correlation matrices}
-
-\item{control}{list of parameters for generation of random correlation matrices}
 
 \item{cluster}{a cluster created by makeCluster() from the parallel package}
 }

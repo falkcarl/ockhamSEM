@@ -22,5 +22,6 @@ Imports:
     effsize,
     parallel,
     nVennR,
-    rlang
+    rlang,
+    clusterGeneration
 RoxygenNote: 7.1.0
