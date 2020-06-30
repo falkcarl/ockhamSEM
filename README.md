@@ -163,6 +163,8 @@ Plot:
 plot(res)
 ```
 
-Output: ![Plot 1](man/figures/README-3varplot1.png)
+Output:
+
+![Plot 1](man/figures/README-3varplot1.png)
 
 ![Plot 2](man/figures/README-3varplot2.png)
