@@ -11,15 +11,16 @@ Description: This package provides an interface for studying the fit
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
+Depends:
+    lavaan (>= 0.6-3),
+    parallel
 Imports: 
     stats,
-    lavaan (>= 0.6-3),
     ggplot2,
     eulerr,
     matrixcalc,
     tidyr,
     effsize,
-    parallel,
     nVennR,
     rlang,
     clusterGeneration
