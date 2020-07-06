@@ -24,7 +24,7 @@ The package is introduced in Falk and Muthukrishna (2020) Parsimony in Model Sel
 ```{r, eval = FALSE}
 # From GitHub:
 # install.packages("devtools")
-devtools::install_github("falkcarl/ggplot2")
+devtools::install_github("falkcarl/ockhamSEM")
 ```
 
 ## Usage
