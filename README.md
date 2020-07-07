@@ -18,7 +18,7 @@ Model Selection: Tools for Assessing Fit Propensity.
 ``` r
 # From GitHub:
 # install.packages("devtools")
-devtools::install_github("falkcarl/ggplot2")
+devtools::install_github("falkcarl/ockhamSEM")
 ```
 
 ## Usage
