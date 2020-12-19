@@ -647,7 +647,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
           tmp<-c(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])
           grp.tmp<-c(rep(1,sum(!is.na(object$complete_mat[,j]))),rep(2,sum(!is.na(object$complete_mat[,j]))))
 
-          efs[[j]][[indx]]$d<-cohen.d(tmp,grp.tmp)$estimate
+          efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$estimate
           efs[[j]][[indx]]$ks<-ks.test(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$statistic
         } else {
@@ -655,7 +655,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
           tmp<-na.omit(tmp)
           grp.tmp<-c(rep(1,nrep),rep(2,nrep))
           grp.tmp<-grp.tmp[-attr(tmp,"na.action")]
-          efs[[j]][[indx]]$d<-cohen.d(tmp,grp.tmp)$estimate
+          efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
 
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][,j],data[[mod2]][,j])$estimate
           efs[[j]][[indx]]$ks<-str(ks.test(data[[mod]][,j],data[[mod2]][,j]))$statistic
