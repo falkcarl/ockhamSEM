@@ -654,11 +654,13 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
           tmp<-c(data[[mod]][,j],data[[mod2]][,j])
           tmp<-na.omit(tmp)
           grp.tmp<-c(rep(1,nrep),rep(2,nrep))
-          grp.tmp<-grp.tmp[-attr(tmp,"na.action")]
+          if(!is.null(attr(tmp,"na.action"))){
+            grp.tmp<-grp.tmp[-attr(tmp,"na.action")]
+          }
           efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
 
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][,j],data[[mod2]][,j])$estimate
-          efs[[j]][[indx]]$ks<-str(ks.test(data[[mod]][,j],data[[mod2]][,j]))$statistic
+          efs[[j]][[indx]]$ks<-ks.test(data[[mod]][,j],data[[mod2]][,j])$statistic
         }
 
         cat("\n", efs[[j]][[indx]]$title, "\n")
