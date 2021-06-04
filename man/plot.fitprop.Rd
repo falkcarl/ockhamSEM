@@ -52,6 +52,7 @@ Plot function for fitprop objects
 \examples{
 \donttest{
 
+library(ggplot2)
 # Set up a covariance matrix to fit models to
 p<-3 # number of variables
 temp_mat <- diag(p) # identity matrix

@@ -132,7 +132,7 @@
 #' # Save and then access correlation matrices and fitted models
 #' # Note: this will take a very long time as the default number
 #' # of iterations is set to a lot
-#' cl<-makeCluster(4)
+#' cl<-makeCluster(2)
 #' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="srmr",
 #'   rmethod="mcmc",reps=1000,cluster=cl,saveModel=TRUE,saveR=TRUE)
 #' stopCluster(cl)
@@ -147,7 +147,7 @@
 #'   miniter = 5000, # but, min number of iterations per chain
 #'   jmpsize = .3
 #' )
-#' cl<-makeCluster(4)
+#' cl<-makeCluster(2)
 #' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="srmr",
 #'   rmethod="mcmc",reps=1000,cluster=cl, mcmc.args=ctrl)
 #' stopCluster(cl)
@@ -326,6 +326,7 @@ run.fitprop <- function(...,
 #' @examples
 #' \donttest{
 #'
+#' library(ggplot2)
 #' # Set up a covariance matrix to fit models to
 #' p<-3 # number of variables
 #' temp_mat <- diag(p) # identity matrix
