@@ -1,9 +1,9 @@
 Package: ockhamSEM
 Type: Package
 Title: Tools for studying fit propensity in structural equation modeling
-Version: 0.1.0
+Version: 0.1.1
 Author: Carl F. Falk and Michael Muthukrishna. MCMC ported from FORTRAN code by Kris Preacher (2003).
-Maintainer: The package maintainer <yourself@somewhere.net>
+Maintainer: Carl F. Falk <carl.falk@mcgill.ca>
 Description: This package provides an interface for studying the fit
   propensity of single-group structural equation models with continuous items.
   Underlying support is through the lavaan package, and a variety built-in
@@ -24,4 +24,7 @@ Imports:
     nVennR,
     rlang,
     clusterGeneration
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
