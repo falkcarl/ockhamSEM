@@ -9,7 +9,8 @@
   ...,
   probs = seq(0, 1, 0.1),
   samereps = TRUE,
-  lower.tail = rep(TRUE, ncol(object$fit_list[[1]]))
+  lower.tail = rep(TRUE, ncol(object$fit_list[[1]])),
+  NML = FALSE
 )
 }
 \arguments{
@@ -22,6 +23,9 @@
 \item{samereps}{Logical value indicating whether to use only results from replications in which all selected models yielded results.}
 
 \item{lower.tail}{Logical vector indicating whether lower values of each fit index corresponds to good fit.}
+
+\item{NML}{(experimental) Logical value indicating whether to compute normalized maximum likelihood (NML). Requires
+that `logl` is a saved fit index.}
 }
 \description{
 Summary function for fitprop objects
@@ -59,6 +63,13 @@ summary(res, probs = c(0,.25,.5,.75,1), lower.tail=c(TRUE,FALSE))
 # summaries computed on possibly different replications:
 # Use different quantiles
 summary(res, samereps=FALSE, lower.tail=c(TRUE,FALSE))
+
+# For computing NML (experimental)
+# But, this is not a great example since the data for the originally
+# fitted models isn't even real data
+res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure=c("logl","srmr"),
+  rmethod="onion",reps=1500)
+summary(res, NML=TRUE)
 
 }
 }

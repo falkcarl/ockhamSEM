@@ -23,7 +23,8 @@ Imports:
     effsize,
     nVennR,
     rlang,
-    clusterGeneration
+    clusterGeneration,
+    matrixStats
 RoxygenNote: 7.1.1
 Suggests: 
     testthat (>= 3.0.0)

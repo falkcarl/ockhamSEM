@@ -287,6 +287,7 @@ run.fitprop <- function(...,
   out$rmethod=rmethod
   out$onlypos=onlypos
   out$nfit=n.fit
+  out$origmodels=models
 
   out$na_list<-na_list
   out$complete_mat<-complete_mat
@@ -515,6 +516,8 @@ print.fitprop<-function(x,...){
 #' @param probs Vector passed to quantile to determine what probabilities to report.
 #' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results.
 #' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit.
+#' @param NML (experimental) Logical value indicating whether to compute normalized maximum likelihood (NML). Requires
+#'   that `logl` is a saved fit index.
 #' @examples
 #' \donttest{
 #'
@@ -549,12 +552,21 @@ print.fitprop<-function(x,...){
 #' # Use different quantiles
 #' summary(res, samereps=FALSE, lower.tail=c(TRUE,FALSE))
 #'
+#' # For computing NML (experimental)
+#' # But, this is not a great example since the data for the originally
+#' # fitted models isn't even real data
+#' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure=c("logl","srmr"),
+#'   rmethod="onion",reps=1500)
+#' summary(res, NML=TRUE)
+#'
 #' }
 #' @export
 #' @importFrom stats quantile median ks.test na.omit
 #' @importFrom utils str
 #' @importFrom effsize cliff.delta cohen.d
-summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(object$fit_list[[1]]))){
+#' @importFrom matrixStats logSumExp
+summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(object$fit_list[[1]])),
+                          NML = FALSE){
 
   data<-object$fit_list
   nmod<-length(data) # number of models
@@ -638,7 +650,6 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
 
     efs[[j]]<-list()
     cat("\n ",colnames(data[[1]])[j],"\n")
-
     indx<-1
     for(mod in 1:(nmod-1)){
       for(mod2 in (mod+1):nmod){
@@ -673,6 +684,45 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
       }
     }
   }
+
+  if(NML & "logl" %in% colnames(data[[1]])){
+    cat(
+      "\n",
+      "Log-Normalized Maximum Likelihood:\n"
+    )
+
+    for(mod in 1:nmod){
+
+      # remove any clearly invalid logl values (these can't be >1)
+      ll.tmp<-as.numeric(data[[mod]][,"logl"])
+      ll.tmp<-ll.tmp[ll.tmp<1]
+      n.ll <- length(ll.tmp)
+
+      # ll obtained
+      ll.obt<-as.numeric(fitMeasures(object$origmodels[[1]],"logl"))
+
+      # CFF idea (use obtained ll)
+      #q<- -ll.obt
+
+      # Another idea: make denominator exp(0)?
+      #q <- -logSumExp(ll.tmp) + log(n.ll)
+
+      num <- ll.obt
+      denom <- logSumExp(ll.tmp) - log(n.ll)
+
+      # Terrence's idea (most negative ll value)
+      #q<--700-min(num,denom)
+
+      # Kris (most work) & CFF (logSumExp)
+      #nml.mod<-exp(ll.obt + q) / exp(q + logSumExp(ll.tmp) - log(n.ll)) # nope, still has problems
+
+      # what about log-nml?
+      log.nml.mod <- (ll.obt) - (logSumExp(ll.tmp) - log(n.ll)) # if so, who cares about q
+
+      cat("\n", paste0("Model ",mod, ": "), round(log.nml.mod, 5))
+    }
+  }
+
 
   out<-list()
   out[["quantiles"]]<-quantiles
