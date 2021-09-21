@@ -685,48 +685,39 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
     }
   }
 
+  out<-list()
+  out[["quantiles"]]<-quantiles
+  out[["stats"]]<-stats
+  out[["efs"]]<-efs
+
   if(NML & "logl" %in% colnames(data[[1]])){
     cat(
       "\n",
-      "Log-Normalized Maximum Likelihood:\n"
+      "-2*Log-Normalized Maximum Likelihood:\n"
     )
 
+    nmls<-vector("numeric")
     for(mod in 1:nmod){
 
-      # remove any clearly invalid logl values (these can't be >1)
+      # remove any clearly invalid logl values (these can't be >0, actually)
       ll.tmp<-as.numeric(data[[mod]][,"logl"])
-      ll.tmp<-ll.tmp[ll.tmp<1]
+      ll.tmp<-ll.tmp[ll.tmp<0]
       n.ll <- length(ll.tmp)
 
       # ll obtained
       ll.obt<-as.numeric(fitMeasures(object$origmodels[[1]],"logl"))
 
-      # CFF idea (use obtained ll)
-      #q<- -ll.obt
-
-      # Another idea: make denominator exp(0)?
-      #q <- -logSumExp(ll.tmp) + log(n.ll)
-
       num <- ll.obt
       denom <- logSumExp(ll.tmp) - log(n.ll)
 
-      # Terrence's idea (most negative ll value)
-      #q<--700-min(num,denom)
-
-      # Kris (most work) & CFF (logSumExp)
-      #nml.mod<-exp(ll.obt + q) / exp(q + logSumExp(ll.tmp) - log(n.ll)) # nope, still has problems
-
       # what about log-nml?
-      log.nml.mod <- (ll.obt) - (logSumExp(ll.tmp) - log(n.ll)) # if so, who cares about q
+      log.nml.mod <- -2*((ll.obt) - (logSumExp(ll.tmp) - log(n.ll)))
 
       cat("\n", paste0("Model ",mod, ": "), round(log.nml.mod, 5))
+      nmls<-c(nmls,log.nml.mod)
     }
+    out[["nml"]]<-nmls
   }
 
-
-  out<-list()
-  out[["quantiles"]]<-quantiles
-  out[["stats"]]<-stats
-  out[["efs"]]<-efs
   invisible(out)
 }
