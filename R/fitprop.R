@@ -696,6 +696,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
       "-2*Log-Normalized Maximum Likelihood:\n"
     )
 
+    #NML (Rissanen)
     nmls<-vector("numeric")
     for(mod in 1:nmod){
 
@@ -705,7 +706,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
       n.ll <- length(ll.tmp)
 
       # ll obtained
-      ll.obt<-as.numeric(fitMeasures(object$origmodels[[1]],"logl"))
+      ll.obt<-as.numeric(fitMeasures(object$origmodels[[mod]],"logl"))
 
       num <- ll.obt
       denom <- logSumExp(ll.tmp) - log(n.ll)
