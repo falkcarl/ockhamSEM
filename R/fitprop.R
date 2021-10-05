@@ -91,7 +91,7 @@
 #' @references
 #' Bonifay, W. E., & Cai, L. (2017). On the complexity of item response theory models. Multivariate Behavioral Research, 52(4), 465–484. \url{http://doi.org/10.1080/00273171.2017.1309262}
 #'
-#' Falk, C. F., & Muthukrishna, M. (in preparation). Parsimony in model selection: Tools for assessing fit propensity.
+#' Falk, C. F., & Muthukrishna, M. (in press). Parsimony in model selection: Tools for assessing fit propensity. Psychological Methods.
 #'
 #' Lewandowski, D., Kurowicka, D., & Joe, H. (2009). Generating random correlation matrices based on vines and extended onion method. Journal of Multivariate Analysis,100(9), 1989–2001. \url{http://doi.org/10.1016/j.jmva.2009.04.008}
 #'
@@ -518,22 +518,23 @@ print.fitprop<-function(x,...){
 #' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit.
 #' @param NML (experimental) Logical value indicating whether to compute normalized maximum likelihood (NML). Requires
 #'   that `logl` is a saved fit index.
+#' @param UIF (experimental) Logical value indicating whether to compute uniform index of fit (Botha, Shapiro, Steiger, 1988).
+#'   Original paper appeared to use least-squares estimation and compute UIF based on proportion of times that obtained fit function
+#'   was better than fit function based on random data.
 #' @examples
 #' \donttest{
 #'
-#' # Set up a covariance matrix to fit models to
-#' p<-3 # number of variables
-#' temp_mat <- diag(p) # identity matrix
-#' colnames(temp_mat) <- rownames(temp_mat) <- paste0("V", seq(1, p))
+#' # Borrow PoliticalDemocracy data
+#' data(PoliticalDemocracy)
 #'
 #' # Define and fit two models using lavaan package
-#' mod1a <- 'V3 ~ V1 + V2
-#'   V1 ~~ 0*V2'
-#' mod2a <- 'V3 ~ V1
-#'   V2 ~ V3'
+#' mod1a <- 'y5 ~ y1 + x1
+#'   y1 ~~ 0*x1'
+#' mod2a <- 'y5 ~ y1
+#'   x1 ~ y5'
 #'
-#' mod1a.fit <- sem(mod1a, sample.cov=temp_mat, sample.nobs=500)
-#' mod2a.fit <- sem(mod2a, sample.cov=temp_mat, sample.nobs=500)
+#' mod1a.fit <- sem(mod1a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500)
+#' mod2a.fit <- sem(mod2a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500)
 #'
 #' # Run fit propensity analysis
 #' # Onion approach, save srmr and CFI
@@ -553,11 +554,25 @@ print.fitprop<-function(x,...){
 #' summary(res, samereps=FALSE, lower.tail=c(TRUE,FALSE))
 #'
 #' # For computing NML (experimental)
-#' # But, this is not a great example since the data for the originally
-#' # fitted models isn't even real data
-#' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure=c("logl","srmr"),
+#' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="logl",
 #'   rmethod="onion",reps=1500)
-#' summary(res, NML=TRUE)
+#'
+#' summary(res, NML=TRUE, lower.tail=FALSE)
+#'
+#' # For computing UIF (experimental)
+#' # Orig UIF used least-squares estimation and examined fit function
+#'
+#' mod1a.fit <- sem(mod1a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
+#'   estimator="ULS")
+#' mod2a.fit <- sem(mod2a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
+#'   estimator="ULS")
+#'
+#' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="fmin",
+#'   rmethod="onion",reps=1500)
+#'
+#' summary(res, UIF=TRUE, lower.tail=TRUE)
+#'
+#'
 #'
 #' }
 #' @export
@@ -754,7 +769,6 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
 
       # what about log-nml?
       log.nml.mod <- -2*((ll.obt) - (logSumExp(ll.tmp) - log(n.ll)))
-
       cat("\n", paste0("Model ",mod, ": "), round(log.nml.mod, 5))
       nmls<-c(nmls,log.nml.mod)
     }

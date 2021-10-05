@@ -188,7 +188,7 @@ summary(res)
 \references{
 Bonifay, W. E., & Cai, L. (2017). On the complexity of item response theory models. Multivariate Behavioral Research, 52(4), 465–484. \url{http://doi.org/10.1080/00273171.2017.1309262}
 
-Falk, C. F., & Muthukrishna, M. (in preparation). Parsimony in model selection: Tools for assessing fit propensity.
+Falk, C. F., & Muthukrishna, M. (in press). Parsimony in model selection: Tools for assessing fit propensity. Psychological Methods.
 
 Lewandowski, D., Kurowicka, D., & Joe, H. (2009). Generating random correlation matrices based on vines and extended onion method. Journal of Multivariate Analysis,100(9), 1989–2001. \url{http://doi.org/10.1016/j.jmva.2009.04.008}
 

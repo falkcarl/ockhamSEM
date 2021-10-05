@@ -10,7 +10,8 @@
   probs = seq(0, 1, 0.1),
   samereps = TRUE,
   lower.tail = rep(TRUE, ncol(object$fit_list[[1]])),
-  NML = FALSE
+  NML = FALSE,
+  UIF = FALSE
 )
 }
 \arguments{
@@ -26,6 +27,10 @@
 
 \item{NML}{(experimental) Logical value indicating whether to compute normalized maximum likelihood (NML). Requires
 that `logl` is a saved fit index.}
+
+\item{UIF}{(experimental) Logical value indicating whether to compute uniform index of fit (Botha, Shapiro, Steiger, 1988).
+Original paper appeared to use least-squares estimation and compute UIF based on proportion of times that obtained fit function
+was better than fit function based on random data.}
 }
 \description{
 Summary function for fitprop objects
@@ -33,19 +38,17 @@ Summary function for fitprop objects
 \examples{
 \donttest{
 
-# Set up a covariance matrix to fit models to
-p<-3 # number of variables
-temp_mat <- diag(p) # identity matrix
-colnames(temp_mat) <- rownames(temp_mat) <- paste0("V", seq(1, p))
+# Borrow PoliticalDemocracy data
+data(PoliticalDemocracy)
 
 # Define and fit two models using lavaan package
-mod1a <- 'V3 ~ V1 + V2
-  V1 ~~ 0*V2'
-mod2a <- 'V3 ~ V1
-  V2 ~ V3'
+mod1a <- 'y5 ~ y1 + x1
+  y1 ~~ 0*x1'
+mod2a <- 'y5 ~ y1
+  x1 ~ y5'
 
-mod1a.fit <- sem(mod1a, sample.cov=temp_mat, sample.nobs=500)
-mod2a.fit <- sem(mod2a, sample.cov=temp_mat, sample.nobs=500)
+mod1a.fit <- sem(mod1a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500)
+mod2a.fit <- sem(mod2a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500)
 
 # Run fit propensity analysis
 # Onion approach, save srmr and CFI
@@ -65,11 +68,25 @@ summary(res, probs = c(0,.25,.5,.75,1), lower.tail=c(TRUE,FALSE))
 summary(res, samereps=FALSE, lower.tail=c(TRUE,FALSE))
 
 # For computing NML (experimental)
-# But, this is not a great example since the data for the originally
-# fitted models isn't even real data
-res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure=c("logl","srmr"),
+res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="logl",
   rmethod="onion",reps=1500)
-summary(res, NML=TRUE)
+
+summary(res, NML=TRUE, lower.tail=FALSE)
+
+# For computing UIF (experimental)
+# Orig UIF used least-squares estimation
+
+mod1a.fit <- sem(mod1a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
+  estimator="ULS")
+mod2a.fit <- sem(mod2a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
+  estimator="ULS")
+
+res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="fmin",
+  rmethod="onion",reps=1500)
+
+summary(res, UIF=TRUE, lower.tail=TRUE)
+
+
 
 }
 }
