@@ -91,7 +91,7 @@
 #' @references
 #' Bonifay, W. E., & Cai, L. (2017). On the complexity of item response theory models. Multivariate Behavioral Research, 52(4), 465–484. \url{http://doi.org/10.1080/00273171.2017.1309262}
 #'
-#' Falk, C. F., & Muthukrishna, M. (in preparation). Parsimony in model selection: Tools for assessing fit propensity.
+#' Falk, C. F., & Muthukrishna, M. (in press). Parsimony in model selection: Tools for assessing fit propensity. Psychological Methods.
 #'
 #' Lewandowski, D., Kurowicka, D., & Joe, H. (2009). Generating random correlation matrices based on vines and extended onion method. Journal of Multivariate Analysis,100(9), 1989–2001. \url{http://doi.org/10.1016/j.jmva.2009.04.008}
 #'
@@ -287,6 +287,7 @@ run.fitprop <- function(...,
   out$rmethod=rmethod
   out$onlypos=onlypos
   out$nfit=n.fit
+  out$origmodels=models
 
   out$na_list<-na_list
   out$complete_mat<-complete_mat
@@ -515,22 +516,31 @@ print.fitprop<-function(x,...){
 #' @param probs Vector passed to quantile to determine what probabilities to report.
 #' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results.
 #' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit.
+#' @param NML (experimental) Logical value indicating whether to compute normalized maximum likelihood (NML; e.g., Rissanen, 2001). Requires
+#'   that `logl` is a saved fit index.
+#' @param UIF (experimental) Logical value indicating whether to compute uniform index of fit (UIF; Botha, Shapiro, Steiger, 1988).
+#'   Original paper appeared to use least-squares estimation and compute UIF based on proportion of times that obtained fit function
+#'   was better than fit function based on random data. Currently this option works for any fit index, but some may make sense more
+#'   than others. Also requires \code{lower.tail} is appropriately set.
+#' @references
+#' Botha, J.D., Shapiro, A., \& Steiger, J.H. (1988). Uniform indices-of-fit for factor analysis models. Multivariate Behavioral Research, 23(4), 443-450. \url{http://doi.org/10.1207/s15327906mbr2304_2}
+#'
+#' Rissanen, J. (2001). Strong optimality of the normalized ML models as universal codes and information in data. IEEE Transactions on Information Theory, 47, 1712–1717.
+#'
 #' @examples
 #' \donttest{
 #'
-#' # Set up a covariance matrix to fit models to
-#' p<-3 # number of variables
-#' temp_mat <- diag(p) # identity matrix
-#' colnames(temp_mat) <- rownames(temp_mat) <- paste0("V", seq(1, p))
+#' # Borrow PoliticalDemocracy data
+#' data(PoliticalDemocracy)
 #'
 #' # Define and fit two models using lavaan package
-#' mod1a <- 'V3 ~ V1 + V2
-#'   V1 ~~ 0*V2'
-#' mod2a <- 'V3 ~ V1
-#'   V2 ~ V3'
+#' mod1a <- 'y5 ~ y1 + x1
+#'   y1 ~~ 0*x1'
+#' mod2a <- 'y5 ~ y1
+#'   x1 ~ y5'
 #'
-#' mod1a.fit <- sem(mod1a, sample.cov=temp_mat, sample.nobs=500)
-#' mod2a.fit <- sem(mod2a, sample.cov=temp_mat, sample.nobs=500)
+#' mod1a.fit <- sem(mod1a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500)
+#' mod2a.fit <- sem(mod2a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500)
 #'
 #' # Run fit propensity analysis
 #' # Onion approach, save srmr and CFI
@@ -549,12 +559,35 @@ print.fitprop<-function(x,...){
 #' # Use different quantiles
 #' summary(res, samereps=FALSE, lower.tail=c(TRUE,FALSE))
 #'
+#' # For computing NML (experimental)
+#' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="logl",
+#'   rmethod="onion",reps=2500)
+#'
+#' summary(res, NML=TRUE, lower.tail=FALSE)
+#'
+#' # For computing UIF (experimental)
+#' # Orig UIF used least-squares estimation and examined fit function
+#'
+#' mod1a.fit <- sem(mod1a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
+#'   estimator="ULS")
+#' mod2a.fit <- sem(mod2a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
+#'   estimator="ULS")
+#'
+#' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="fmin",
+#'   rmethod="onion",reps=2500)
+#'
+#' summary(res, UIF=TRUE, lower.tail=TRUE)
+#'
+#'
+#'
 #' }
 #' @export
 #' @importFrom stats quantile median ks.test na.omit
 #' @importFrom utils str
 #' @importFrom effsize cliff.delta cohen.d
-summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(object$fit_list[[1]]))){
+#' @importFrom matrixStats logSumExp
+summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(object$fit_list[[1]])),
+                          NML = FALSE, UIF=FALSE){
 
   data<-object$fit_list
   nmod<-length(data) # number of models
@@ -564,6 +597,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
   stats<-list()
   quantiles<-list()
   efs<-list()
+  if(UIF){uif<-list()}
 
   cat(
     "\n",
@@ -595,27 +629,62 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
 
   for(mod in 1:nmod){
     cat("\n Model ",mod,"\n")
+
+    fitnames<-colnames(data[[mod]])
+
     finite<-apply(data[[mod]],2,function(x){sum(is.finite(x))})
     na<-apply(data[[mod]],2,function(x){sum(is.na(x))})
     nrep<-nrow(data[[mod]])
     if(samereps){
       means<-NULL
       medians<-NULL
+      uifs<-NULL
+
       for(j in 1:nfit){
-        means<-c(means,mean(data[[mod]][!is.na(object$complete_mat[,j]),j]))
-        medians<-c(medians,median(data[[mod]][!is.na(object$complete_mat[,j]),j]))
+
+        datj<-data[[mod]][!is.na(object$complete_mat[,j]),j]
+
+        means<-c(means,mean(datj))
+        medians<-c(medians,median(datj))
+
+        if(UIF){
+          obt<-as.numeric(fitMeasures(object$origmodels[[mod]],fitnames[j]))
+          n.uif <- length(datj)
+          if(lower.tail[j]){
+            uif.mod <- sum(obt<=datj)/n.uif
+          } else {
+            uif.mod <- sum(obt>=datj)/n.uif
+          }
+          uifs<-c(uifs,uif.mod)
+        }
       }
-      names(means)<-names(medians)<-colnames(data[[mod]])
     } else {
       means<-colMeans(data[[mod]],na.rm=TRUE)
       medians<-apply(data[[mod]],2,median,na.rm=TRUE)
+
+      if(UIF){
+        for(j in 1:nfit){
+          obt<-as.numeric(fitMeasures(object$origmodels[[mod]],fitnames[j]))
+          n.uif <- length(data[[mod]][!is.na(object$complete_mat[,j]),j])
+          if(lower.tail[j]){
+            uif.mod <- sum(obt<=data[[mod]][!is.na(object$complete_mat[,j]),j])/n.uif
+          } else {
+            uif.mod <- sum(obt>=data[[mod]][!is.na(object$complete_mat[,j]),j])/n.uif
+          }
+          uifs<-c(uifs,uif.mod)
+        }
+      }
     }
+
+    names(means)<-names(medians)<-fitnames
+    if(UIF){names(uifs)<-fitnames}
 
     stats[[mod]]<-list()
     stats[[mod]]$finite<-finite
     stats[[mod]]$finite<-na
     stats[[mod]]$means<-means
     stats[[mod]]$medians<-medians
+    if(UIF){stats[[mod]]$uifs<-uifs}
 
     cat("\nMean across replications\n")
     print.default(round(means,3))
@@ -638,7 +707,6 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
 
     efs[[j]]<-list()
     cat("\n ",colnames(data[[1]])[j],"\n")
-
     indx<-1
     for(mod in 1:(nmod-1)){
       for(mod2 in (mod+1):nmod){
@@ -651,6 +719,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
           efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$estimate
           efs[[j]][[indx]]$ks<-ks.test(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$statistic
+
         } else {
           tmp<-c(data[[mod]][,j],data[[mod2]][,j])
           tmp<-na.omit(tmp)
@@ -658,8 +727,8 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
           if(!is.null(attr(tmp,"na.action"))){
             grp.tmp<-grp.tmp[-attr(tmp,"na.action")]
           }
-          efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
 
+          efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][,j],data[[mod2]][,j])$estimate
           efs[[j]][[indx]]$ks<-ks.test(data[[mod]][,j],data[[mod2]][,j])$statistic
         }
@@ -678,5 +747,52 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
   out[["quantiles"]]<-quantiles
   out[["stats"]]<-stats
   out[["efs"]]<-efs
+
+  if(NML | UIF){
+    cat(
+      "\n",
+      "Fit indices for obtained model\n"
+    )
+
+    if(NML & "logl" %in% colnames(data[[1]])){
+      cat(
+        "\n",
+        "-2*Log-Normalized Maximum Likelihood:\n"
+      )
+
+      #NML (Rissanen)
+      nmls<-vector("numeric")
+      for(mod in 1:nmod){
+
+        # remove any clearly invalid logl values (these can't be >0, actually)
+        ll.tmp<-as.numeric(data[[mod]][,"logl"])
+        ll.tmp<-ll.tmp[ll.tmp<0]
+        n.ll <- length(ll.tmp)
+
+        # ll obtained
+        ll.obt<-as.numeric(fitMeasures(object$origmodels[[mod]],"logl"))
+
+        num <- ll.obt
+        denom <- logSumExp(ll.tmp) - log(n.ll)
+
+        # what about log-nml?
+        log.nml.mod <- -2*((ll.obt) - (logSumExp(ll.tmp) - log(n.ll)))
+        cat("\n", paste0("Model ",mod, ": "), round(log.nml.mod, 5))
+        nmls<-c(nmls,log.nml.mod)
+      }
+      out[["nml"]]<-nmls
+    }
+
+
+    if(UIF){
+      cat("\nUniform Index of Fit (Botha, Shapiro, Steiger, 1988)\n")
+      for(mod in 1:nmod){
+        cat("\n Model ",mod,"\n")
+        print.default(round(stats[[mod]]$uifs,3))
+      }
+    }
+
+  }
+
   invisible(out)
 }
