@@ -516,11 +516,17 @@ print.fitprop<-function(x,...){
 #' @param probs Vector passed to quantile to determine what probabilities to report.
 #' @param samereps Logical value indicating whether to use only results from replications in which all selected models yielded results.
 #' @param lower.tail Logical vector indicating whether lower values of each fit index corresponds to good fit.
-#' @param NML (experimental) Logical value indicating whether to compute normalized maximum likelihood (NML). Requires
+#' @param NML (experimental) Logical value indicating whether to compute normalized maximum likelihood (NML; e.g., Rissanen, 2001). Requires
 #'   that `logl` is a saved fit index.
-#' @param UIF (experimental) Logical value indicating whether to compute uniform index of fit (Botha, Shapiro, Steiger, 1988).
+#' @param UIF (experimental) Logical value indicating whether to compute uniform index of fit (UIF; Botha, Shapiro, Steiger, 1988).
 #'   Original paper appeared to use least-squares estimation and compute UIF based on proportion of times that obtained fit function
-#'   was better than fit function based on random data.
+#'   was better than fit function based on random data. Currently this option works for any fit index, but some may make sense more
+#'   than others. Also requires \code{lower.tail} is appropriately set.
+#' @references
+#' Botha, J.D., Shapiro, A., \& Steiger, J.H. (1988). Uniform indices-of-fit for factor analysis models. Multivariate Behavioral Research, 23(4), 443-450. \url{http://doi.org/10.1207/s15327906mbr2304_2}
+#'
+#' Rissanen, J. (2001). Strong optimality of the normalized ML models as universal codes and information in data. IEEE Transactions on Information Theory, 47, 1712–1717.
+#'
 #' @examples
 #' \donttest{
 #'
