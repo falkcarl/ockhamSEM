@@ -561,7 +561,7 @@ print.fitprop<-function(x,...){
 #'
 #' # For computing NML (experimental)
 #' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="logl",
-#'   rmethod="onion",reps=1500)
+#'   rmethod="onion",reps=2500)
 #'
 #' summary(res, NML=TRUE, lower.tail=FALSE)
 #'
@@ -574,7 +574,7 @@ print.fitprop<-function(x,...){
 #'   estimator="ULS")
 #'
 #' res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="fmin",
-#'   rmethod="onion",reps=1500)
+#'   rmethod="onion",reps=2500)
 #'
 #' summary(res, UIF=TRUE, lower.tail=TRUE)
 #'
@@ -690,10 +690,6 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
     print.default(round(means,3))
     cat("\nMedian across replications\n")
     print.default(round(medians,3))
-    if(UIF){
-      cat("\nUniform Index of Fit (Botha, Shapiro, Steiger, 1988)\n")
-      print.default(round(uifs,3))
-    }
     cat("\nNumber of finite values\n")
     print.default(finite)
     cat("\nNumber of NA values\n")
@@ -752,33 +748,50 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
   out[["stats"]]<-stats
   out[["efs"]]<-efs
 
-  if(NML & "logl" %in% colnames(data[[1]])){
+  if(NML | UIF){
     cat(
       "\n",
-      "-2*Log-Normalized Maximum Likelihood:\n"
+      "Fit indices for obtained model\n"
     )
 
-    #NML (Rissanen)
-    nmls<-vector("numeric")
-    for(mod in 1:nmod){
+    if(NML & "logl" %in% colnames(data[[1]])){
+      cat(
+        "\n",
+        "-2*Log-Normalized Maximum Likelihood:\n"
+      )
 
-      # remove any clearly invalid logl values (these can't be >0, actually)
-      ll.tmp<-as.numeric(data[[mod]][,"logl"])
-      ll.tmp<-ll.tmp[ll.tmp<0]
-      n.ll <- length(ll.tmp)
+      #NML (Rissanen)
+      nmls<-vector("numeric")
+      for(mod in 1:nmod){
 
-      # ll obtained
-      ll.obt<-as.numeric(fitMeasures(object$origmodels[[mod]],"logl"))
+        # remove any clearly invalid logl values (these can't be >0, actually)
+        ll.tmp<-as.numeric(data[[mod]][,"logl"])
+        ll.tmp<-ll.tmp[ll.tmp<0]
+        n.ll <- length(ll.tmp)
 
-      num <- ll.obt
-      denom <- logSumExp(ll.tmp) - log(n.ll)
+        # ll obtained
+        ll.obt<-as.numeric(fitMeasures(object$origmodels[[mod]],"logl"))
 
-      # what about log-nml?
-      log.nml.mod <- -2*((ll.obt) - (logSumExp(ll.tmp) - log(n.ll)))
-      cat("\n", paste0("Model ",mod, ": "), round(log.nml.mod, 5))
-      nmls<-c(nmls,log.nml.mod)
+        num <- ll.obt
+        denom <- logSumExp(ll.tmp) - log(n.ll)
+
+        # what about log-nml?
+        log.nml.mod <- -2*((ll.obt) - (logSumExp(ll.tmp) - log(n.ll)))
+        cat("\n", paste0("Model ",mod, ": "), round(log.nml.mod, 5))
+        nmls<-c(nmls,log.nml.mod)
+      }
+      out[["nml"]]<-nmls
     }
-    out[["nml"]]<-nmls
+
+
+    if(UIF){
+      cat("\nUniform Index of Fit (Botha, Shapiro, Steiger, 1988)\n")
+      for(mod in 1:nmod){
+        cat("\n Model ",mod,"\n")
+        print.default(round(stats[[mod]]$uifs,3))
+      }
+    }
+
   }
 
   invisible(out)
