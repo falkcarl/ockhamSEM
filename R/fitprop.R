@@ -566,7 +566,7 @@ print.fitprop<-function(x,...){
 #' @importFrom effsize cliff.delta cohen.d
 #' @importFrom matrixStats logSumExp
 summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=rep(TRUE,ncol(object$fit_list[[1]])),
-                          NML = FALSE){
+                          NML = FALSE, UIF=FALSE){
 
   data<-object$fit_list
   nmod<-length(data) # number of models
@@ -576,6 +576,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
   stats<-list()
   quantiles<-list()
   efs<-list()
+  if(UIF){uif<-list()}
 
   cat(
     "\n",
@@ -607,32 +608,71 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
 
   for(mod in 1:nmod){
     cat("\n Model ",mod,"\n")
+
+    fitnames<-colnames(data[[mod]])
+
     finite<-apply(data[[mod]],2,function(x){sum(is.finite(x))})
     na<-apply(data[[mod]],2,function(x){sum(is.na(x))})
     nrep<-nrow(data[[mod]])
     if(samereps){
       means<-NULL
       medians<-NULL
+      uifs<-NULL
+
       for(j in 1:nfit){
-        means<-c(means,mean(data[[mod]][!is.na(object$complete_mat[,j]),j]))
-        medians<-c(medians,median(data[[mod]][!is.na(object$complete_mat[,j]),j]))
+
+        datj<-data[[mod]][!is.na(object$complete_mat[,j]),j]
+
+        means<-c(means,mean(datj))
+        medians<-c(medians,median(datj))
+
+        if(UIF){
+          obt<-as.numeric(fitMeasures(object$origmodels[[mod]],fitnames[j]))
+          n.uif <- length(datj)
+          if(lower.tail[j]){
+            uif.mod <- sum(obt<=datj)/n.uif
+          } else {
+            uif.mod <- sum(obt>=datj)/n.uif
+          }
+          uifs<-c(uifs,uif.mod)
+        }
       }
-      names(means)<-names(medians)<-colnames(data[[mod]])
     } else {
       means<-colMeans(data[[mod]],na.rm=TRUE)
       medians<-apply(data[[mod]],2,median,na.rm=TRUE)
+
+      if(UIF){
+        for(j in 1:nfit){
+          obt<-as.numeric(fitMeasures(object$origmodels[[mod]],fitnames[j]))
+          n.uif <- length(data[[mod]][!is.na(object$complete_mat[,j]),j])
+          if(lower.tail[j]){
+            uif.mod <- sum(obt<=data[[mod]][!is.na(object$complete_mat[,j]),j])/n.uif
+          } else {
+            uif.mod <- sum(obt>=data[[mod]][!is.na(object$complete_mat[,j]),j])/n.uif
+          }
+          uifs<-c(uifs,uif.mod)
+        }
+      }
     }
+
+    names(means)<-names(medians)<-fitnames
+    if(UIF){names(uifs)<-fitnames}
 
     stats[[mod]]<-list()
     stats[[mod]]$finite<-finite
     stats[[mod]]$finite<-na
     stats[[mod]]$means<-means
     stats[[mod]]$medians<-medians
+    if(UIF){stats[[mod]]$uifs<-uifs}
 
     cat("\nMean across replications\n")
     print.default(round(means,3))
     cat("\nMedian across replications\n")
     print.default(round(medians,3))
+    if(UIF){
+      cat("\nUniform Index of Fit (Botha, Shapiro, Steiger, 1988)\n")
+      print.default(round(uifs,3))
+    }
     cat("\nNumber of finite values\n")
     print.default(finite)
     cat("\nNumber of NA values\n")
@@ -662,6 +702,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
           efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$estimate
           efs[[j]][[indx]]$ks<-ks.test(data[[mod]][!is.na(object$complete_mat[,j]),j],data[[mod2]][!is.na(object$complete_mat[,j]),j])$statistic
+
         } else {
           tmp<-c(data[[mod]][,j],data[[mod2]][,j])
           tmp<-na.omit(tmp)
@@ -669,8 +710,8 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
           if(!is.null(attr(tmp,"na.action"))){
             grp.tmp<-grp.tmp[-attr(tmp,"na.action")]
           }
-          efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
 
+          efs[[j]][[indx]]$d<-cohen.d(tmp,as.factor(grp.tmp))$estimate
           efs[[j]][[indx]]$delta<-cliff.delta(data[[mod]][,j],data[[mod2]][,j])$estimate
           efs[[j]][[indx]]$ks<-ks.test(data[[mod]][,j],data[[mod2]][,j])$statistic
         }
