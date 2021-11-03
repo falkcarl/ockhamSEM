@@ -25,12 +25,13 @@
 
 \item{lower.tail}{Logical vector indicating whether lower values of each fit index corresponds to good fit.}
 
-\item{NML}{(experimental) Logical value indicating whether to compute normalized maximum likelihood (NML). Requires
+\item{NML}{(experimental) Logical value indicating whether to compute normalized maximum likelihood (NML; e.g., Rissanen, 2001). Requires
 that `logl` is a saved fit index.}
 
-\item{UIF}{(experimental) Logical value indicating whether to compute uniform index of fit (Botha, Shapiro, Steiger, 1988).
+\item{UIF}{(experimental) Logical value indicating whether to compute uniform index of fit (UIF; Botha, Shapiro, Steiger, 1988).
 Original paper appeared to use least-squares estimation and compute UIF based on proportion of times that obtained fit function
-was better than fit function based on random data.}
+was better than fit function based on random data. Currently this option works for any fit index, but some may make sense more
+than others. Also requires \code{lower.tail} is appropriately set.}
 }
 \description{
 Summary function for fitprop objects
@@ -69,12 +70,12 @@ summary(res, samereps=FALSE, lower.tail=c(TRUE,FALSE))
 
 # For computing NML (experimental)
 res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="logl",
-  rmethod="onion",reps=1500)
+  rmethod="onion",reps=2500)
 
 summary(res, NML=TRUE, lower.tail=FALSE)
 
 # For computing UIF (experimental)
-# Orig UIF used least-squares estimation
+# Orig UIF used least-squares estimation and examined fit function
 
 mod1a.fit <- sem(mod1a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
   estimator="ULS")
@@ -82,11 +83,16 @@ mod2a.fit <- sem(mod2a, sample.cov=cov(PoliticalDemocracy), sample.nobs=500,
   estimator="ULS")
 
 res <- run.fitprop(mod1a.fit, mod2a.fit, fit.measure="fmin",
-  rmethod="onion",reps=1500)
+  rmethod="onion",reps=2500)
 
 summary(res, UIF=TRUE, lower.tail=TRUE)
 
 
 
 }
+}
+\references{
+Botha, J.D., Shapiro, A., \& Steiger, J.H. (1988). Uniform indices-of-fit for factor analysis models. Multivariate Behavioral Research, 23(4), 443-450. \url{http://doi.org/10.1207/s15327906mbr2304_2}
+
+Rissanen, J. (2001). Strong optimality of the normalized ML models as universal codes and information in data. IEEE Transactions on Information Theory, 47, 1712–1717.
 }
