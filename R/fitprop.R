@@ -766,7 +766,7 @@ summary.fitprop<-function(object,...,probs=seq(0,1,.1),samereps=TRUE,lower.tail=
 
         # remove any clearly invalid logl values (these can't be >0, actually)
         ll.tmp<-as.numeric(data[[mod]][,"logl"])
-        ll.tmp<-ll.tmp[ll.tmp<0]
+        ll.tmp<-ll.tmp[ll.tmp<0 & !is.na(ll.tmp)]
         n.ll <- length(ll.tmp)
 
         # ll obtained
