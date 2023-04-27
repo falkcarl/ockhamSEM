@@ -374,7 +374,6 @@ run.fitprop <- function(...,
 #' @importFrom stats na.omit
 #' @importFrom tidyr gather
 #' @importFrom eulerr euler
-#' @importFrom nVennR plotVenn
 #' @importFrom rlang .data
 plot.fitprop<-function(x,...,type=c("ecdf","euler","nVennR"),whichmod=NULL,whichfit=colnames(x$fit_list[[1]]),savePlot=FALSE,
                        xlim=c(0,1),samereps=TRUE,cutoff=rep(.1,length(whichfit)),lower.tail=rep(TRUE,length(whichfit)),
@@ -469,7 +468,7 @@ plot.fitprop<-function(x,...,type=c("ecdf","euler","nVennR"),whichmod=NULL,which
       #colnames(tmp)<-c("Total",whichmod)
       #eulerfit<-euler(tmp)
       #graph<-plot(eulerfit)
-      graph<-plotVenn(tmp,nCycles=5000,showPlot=F,sNames=c(mod.lab,"Total"))
+      #graph<-plotVenn(tmp,nCycles=5000,showPlot=F,sNames=c(mod.lab,"Total"))
     }
 
     # do something with plot
